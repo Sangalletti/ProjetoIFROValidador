@@ -1,6 +1,6 @@
-# Authos
+# Validador Educacional Brasil
 
-Authos e um app Flask em arquivo unico para gerar QR Codes unicos, salvar o hash SHA-256 do token no SQLite e validar o QR em uma pagina publica com nome e CPF.
+Validador Educacional Brasil e um app Flask em arquivo unico para gerar QR Codes unicos, salvar o hash SHA-256 do token no SQLite e validar o QR em uma pagina publica com nome e CPF.
 
 ## Rodando localmente
 
@@ -52,7 +52,7 @@ Coloque Caddy ou Nginx na frente do Gunicorn para fazer HTTPS e proxy para `127.
 
 - `app.py`: aplicacao, modelos, rotas, templates e CSS.
 - `requirements.txt`: dependencias.
-- `instance/authos.sqlite3`: banco local com registros e PNGs gerados.
+- `instance/validador_educacional_brasil.sqlite3`: banco local com registros e PNGs gerados.
 
 ## Seguranca
 

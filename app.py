@@ -56,7 +56,7 @@ csrf = CSRFProtect()
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 public_bp = Blueprint("public", __name__)
 CPF_DIGITS = re.compile(r"\D+")
-TOKEN_SESSION_KEY = "authos_qr_tokens"
+TOKEN_SESSION_KEY = "validador_educa_brasil_qr_tokens"
 
 
 def utc_now():
@@ -66,7 +66,7 @@ def utc_now():
 def normalize_cpf(value):
     digits = CPF_DIGITS.sub("", value or "")
     if not _is_valid_cpf(digits):
-        raise ValueError("CPF invalido.")
+        raise ValueError("CPF inválido.")
     return digits
 
 
@@ -135,7 +135,7 @@ class QrRecord(db.Model):
 
 
 class LoginForm(FlaskForm):
-    username = StringField("Usuario", validators=[DataRequired(), Length(max=80)])
+    username = StringField("Usuário", validators=[DataRequired(), Length(max=80)])
     password = PasswordField("Senha", validators=[DataRequired(), Length(max=256)])
     submit = SubmitField("Entrar")
 
@@ -181,7 +181,7 @@ def create_qr_record(full_name, cpf, token_factory=None, max_attempts=10):
     clean_name = " ".join((full_name or "").split())
 
     if not clean_name:
-        raise ValueError("Nome completo e obrigatorio.")
+        raise ValueError("Nome completo é obrigatório.")
 
     for _ in range(max_attempts):
         token = token_factory(32)
@@ -201,7 +201,7 @@ def create_qr_record(full_name, cpf, token_factory=None, max_attempts=10):
 
         return record, token
 
-    raise TokenGenerationError("Nao foi possivel gerar um QR Code unico.")
+    raise TokenGenerationError("Não foi possível gerar um QR Code único.")
 
 
 def revoke_qr_record(record):
@@ -262,7 +262,7 @@ def login():
             flash("Login realizado com sucesso.", "success")
             return redirect(_safe_next_url() or url_for("admin.qrcodes"))
 
-        flash("Usuario ou senha invalidos.", "error")
+        flash("Usuário ou senha inválidos.", "error")
 
     return render_template("admin/login.html", form=form)
 
@@ -273,7 +273,7 @@ def logout():
     form = LogoutForm()
     if form.validate_on_submit():
         logout_user()
-        flash("Sessao encerrada.", "success")
+        flash("Sessão encerrada.", "success")
         return redirect(url_for("admin.login"))
     abort(400)
 
@@ -336,7 +336,7 @@ def qrcode_png(record_id):
         image,
         mimetype="image/png",
         as_attachment=request.args.get("download") == "1",
-        download_name=f"authos-qr-{record.id}.png",
+        download_name=f"validador-educa-brasil-qr-{record.id}.png",
     )
 
 
@@ -417,7 +417,7 @@ def create_app(test_config=None):
     app.config.from_object(Config)
     app.config.update(
         SECRET_KEY=os.environ.get("SECRET_KEY", "dev-change-me"),
-        SQLALCHEMY_DATABASE_URI=os.environ.get("DATABASE_URL", "sqlite:///authos.sqlite3"),
+        SQLALCHEMY_DATABASE_URI=os.environ.get("DATABASE_URL", "sqlite:///validador_educa_brasil.sqlite3"),
         BASE_URL=os.environ.get("BASE_URL", "validadoreducabrasil.com.br"),
         SESSION_COOKIE_SECURE=_env_bool("SESSION_COOKIE_SECURE", True),
         WTF_CSRF_ENABLED=_env_bool("WTF_CSRF_ENABLED", True),
@@ -467,7 +467,7 @@ def create_app(test_config=None):
         response.headers.setdefault("Referrer-Policy", "same-origin")
         response.headers.setdefault(
             "Content-Security-Policy",
-            "default-src 'self'; img-src 'self'; style-src 'self'; "
+            "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; "
             "base-uri 'self'; form-action 'self'; frame-ancestors 'none'",
         )
         if request.is_secure:
@@ -479,7 +479,7 @@ def create_app(test_config=None):
 
     @app.errorhandler(CSRFError)
     def handle_csrf_error(error):
-        flash("Sessao expirada ou formulario invalido. Tente novamente.", "error")
+        flash("Sessão expirada ou formulário inválido. Tente novamente.", "error")
         return redirect(url_for("admin.login"))
 
     _register_cli(app)
@@ -504,11 +504,11 @@ def _register_cli(app):
     def create_admin_command(username, password):
         username = username.strip()
         if not username:
-            raise click.ClickException("Informe um nome de usuario valido.")
+            raise click.ClickException("Informe um nome de usuário válido.")
 
         existing = AdminUser.query.filter_by(username=username).first()
         if existing:
-            raise click.ClickException("Este usuario admin ja existe.")
+            raise click.ClickException("Este usuário admin já existe.")
 
         user = AdminUser(username=username)
         user.set_password(password)
@@ -531,6 +531,10 @@ def _ensure_schema(app):
             db.session.execute(text("ALTER TABLE qr_records ADD COLUMN qr_png BLOB"))
             db.session.commit()
 
+
+# ==========================================
+# SEÇÃO HTML (TEMPLATES JINJA2)
+# ==========================================
 TEMPLATES = {
     "base.html": """
 <!doctype html>
@@ -538,17 +542,17 @@ TEMPLATES = {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}Authos{% endblock %}</title>
+  <title>{% block title %}Validador Educa Brasil{% endblock %}</title>
   <link rel="stylesheet" href="{{ url_for('styles_css') }}">
 </head>
 <body>
   <header class="topbar">
-    <a class="brand" href="{{ url_for('admin.qrcodes') if current_user.is_authenticated else url_for('admin.login') }}">Authos</a>
+    <a class="brand" href="{{ url_for('admin.qrcodes') if current_user.is_authenticated else url_for('admin.login') }}">Validador Educa Brasil</a>
     {% if current_user.is_authenticated and logout_form is defined %}
       <nav class="nav">
         <a href="{{ url_for('admin.qrcodes') }}">Registros</a>
         <a href="{{ url_for('admin.new_qrcode') }}">Novo QR</a>
-        <form method="post" action="{{ url_for('admin.logout') }}">
+        <form class="nav-form" method="post" action="{{ url_for('admin.logout') }}">
           {{ logout_form.csrf_token }}
           <button class="link-button" type="submit">Sair</button>
         </form>
@@ -578,24 +582,28 @@ TEMPLATES = {
 """,
     "admin/login.html": """
 {% extends "base.html" %}
-{% block title %}Login admin - Authos{% endblock %}
+{% block title %}Login admin - Validador Educa Brasil{% endblock %}
 {% block content %}
 <section class="auth-panel">
   <h1>Login admin</h1>
   <form class="form" method="post" novalidate>
     {{ form.hidden_tag() }}
 
-    <label for="{{ form.username.id }}">{{ form.username.label.text }}</label>
-    {{ form.username(autocomplete="username") }}
-    {% for error in form.username.errors %}
-      <span class="field-error">{{ error }}</span>
-    {% endfor %}
+    <div class="form-group">
+      <label for="{{ form.username.id }}">{{ form.username.label.text }}</label>
+      {{ form.username(autocomplete="username") }}
+      {% for error in form.username.errors %}
+        <span class="field-error">{{ error }}</span>
+      {% endfor %}
+    </div>
 
-    <label for="{{ form.password.id }}">{{ form.password.label.text }}</label>
-    {{ form.password(autocomplete="current-password") }}
-    {% for error in form.password.errors %}
-      <span class="field-error">{{ error }}</span>
-    {% endfor %}
+    <div class="form-group">
+      <label for="{{ form.password.id }}">{{ form.password.label.text }}</label>
+      {{ form.password(autocomplete="current-password") }}
+      {% for error in form.password.errors %}
+        <span class="field-error">{{ error }}</span>
+      {% endfor %}
+    </div>
 
     {{ form.submit(class="button button-primary") }}
   </form>
@@ -604,10 +612,10 @@ TEMPLATES = {
 """,
     "admin/qrcodes.html": """
 {% extends "base.html" %}
-{% block title %}Registros - Authos{% endblock %}
+{% block title %}Registros - Validador Educa Brasil{% endblock %}
 {% block content %}
 <section class="page-heading">
-  <div>
+  <div class="heading-meta">
     <p class="eyebrow">Admin</p>
     <h1>QR Codes</h1>
   </div>
@@ -623,7 +631,7 @@ TEMPLATES = {
           <th>CPF</th>
           <th>Status</th>
           <th>Criado em</th>
-          <th></th>
+          <th>Ações</th>
         </tr>
       </thead>
       <tbody>
@@ -631,13 +639,17 @@ TEMPLATES = {
           <tr>
             <td>{{ record.full_name }}</td>
             <td>{{ record.formatted_cpf }}</td>
-            <td><span class="status {{ 'status-active' if record.is_active else 'status-revoked' }}">{{ record.status_label }}</span></td>
+            <td>
+              <span class="status {{ 'status-active' if record.is_active else 'status-revoked' }}">
+                {{ record.status_label }}
+              </span>
+            </td>
             <td>{{ record.created_at.strftime("%d/%m/%Y %H:%M") }}</td>
-            <td class="align-right">
-              <span class="row-actions">
+            <td>
+              <div class="row-actions">
                 <a href="{{ url_for('admin.qrcode_detail', record_id=record.id) }}">Abrir</a>
                 <a class="danger-text" href="{{ url_for('admin.delete_qrcode_confirm', record_id=record.id) }}">Apagar</a>
-              </span>
+              </div>
             </td>
           </tr>
         {% endfor %}
@@ -654,10 +666,10 @@ TEMPLATES = {
 """,
     "admin/new_qrcode.html": """
 {% extends "base.html" %}
-{% block title %}Novo QR Code - Authos{% endblock %}
+{% block title %}Novo QR Code - Validador Educa Brasil{% endblock %}
 {% block content %}
 <section class="page-heading">
-  <div>
+  <div class="heading-meta">
     <p class="eyebrow">Novo registro</p>
     <h1>Criar QR Code</h1>
   </div>
@@ -667,17 +679,21 @@ TEMPLATES = {
   <form class="form" method="post" novalidate>
     {{ form.hidden_tag() }}
 
-    <label for="{{ form.full_name.id }}">{{ form.full_name.label.text }}</label>
-    {{ form.full_name(autocomplete="name", placeholder="Nome da pessoa") }}
-    {% for error in form.full_name.errors %}
-      <span class="field-error">{{ error }}</span>
-    {% endfor %}
+    <div class="form-group">
+      <label for="{{ form.full_name.id }}">{{ form.full_name.label.text }}</label>
+      {{ form.full_name(autocomplete="name", placeholder="Nome da pessoa") }}
+      {% for error in form.full_name.errors %}
+        <span class="field-error">{{ error }}</span>
+      {% endfor %}
+    </div>
 
-    <label for="{{ form.cpf.id }}">{{ form.cpf.label.text }}</label>
-    {{ form.cpf(inputmode="numeric", autocomplete="off", placeholder="000.000.000-00") }}
-    {% for error in form.cpf.errors %}
-      <span class="field-error">{{ error }}</span>
-    {% endfor %}
+    <div class="form-group">
+      <label for="{{ form.cpf.id }}">{{ form.cpf.label.text }}</label>
+      {{ form.cpf(inputmode="numeric", autocomplete="off", placeholder="000.000.000-00") }}
+      {% for error in form.cpf.errors %}
+        <span class="field-error">{{ error }}</span>
+      {% endfor %}
+    </div>
 
     <div class="actions">
       {{ form.submit(class="button button-primary") }}
@@ -689,18 +705,18 @@ TEMPLATES = {
 """,
     "admin/qrcode_detail.html": """
 {% extends "base.html" %}
-{% block title %}QR Code - Authos{% endblock %}
+{% block title %}QR Code - Validador Educa Brasil{% endblock %}
 {% block content %}
-<section class="page-heading">
-  <div>
+<section class="page-heading detail-header">
+  <div class="heading-meta">
     <p class="eyebrow">Registro</p>
     <h1>{{ record.full_name }}</h1>
   </div>
   <span class="status {{ 'status-active' if record.is_active else 'status-revoked' }}">{{ record.status_label }}</span>
 </section>
 
-<section class="detail-grid">
-  <div class="detail-panel">
+<div class="detail-grid">
+  <section class="detail-panel">
     <dl class="facts">
       <div>
         <dt>CPF</dt>
@@ -720,48 +736,53 @@ TEMPLATES = {
 
     <div class="actions">
       {% if record.is_active %}
-        <form method="post" action="{{ url_for('admin.revoke_qrcode', record_id=record.id) }}">
+        <form class="action-form" method="post" action="{{ url_for('admin.revoke_qrcode', record_id=record.id) }}">
           {{ logout_form.csrf_token }}
           <button class="button button-danger" type="submit">Revogar QR Code</button>
         </form>
       {% endif %}
       <a class="button button-outline-danger" href="{{ url_for('admin.delete_qrcode_confirm', record_id=record.id) }}">Apagar registro</a>
     </div>
-  </div>
+  </section>
 
-  <div class="qr-panel">
+  <section class="qr-panel">
     {% if record.is_active and (public_url or record.qr_png) %}
-      <img class="qr-image" src="{{ url_for('admin.qrcode_png', record_id=record.id) }}" alt="QR Code Authos">
+      <div class="qr-image-container">
+        <img class="qr-image" src="{{ url_for('admin.qrcode_png', record_id=record.id) }}" alt="QR Code Validador Educa Brasil">
+      </div>
       {% if public_url %}
-        <label for="public-url">URL publica</label>
-        <input id="public-url" value="{{ public_url }}" readonly>
+        <div class="url-input-container">
+          <label for="public-url">URL pública</label>
+          <input id="public-url" value="{{ public_url }}" readonly>
+        </div>
       {% else %}
-        <p class="muted-note">URL indisponivel nesta sessao, mas o PNG salvo pode ser baixado.</p>
+        <p class="muted-note">URL indisponível nesta sessão, mas o PNG salvo pode ser baixado.</p>
       {% endif %}
       <a class="button button-primary" href="{{ url_for('admin.qrcode_png', record_id=record.id, download=1) }}">Baixar PNG</a>
     {% else %}
       <div class="empty-state compact">
-        <h2>Imagem indisponivel</h2>
+        <h2>Imagem indisponível</h2>
         <p>Crie outro QR Code para gerar uma nova imagem.</p>
       </div>
     {% endif %}
-  </div>
-</section>
+  </section>
+</div>
 {% endblock %}
 """,
     "admin/delete_qrcode.html": """
 {% extends "base.html" %}
-{% block title %}Apagar registro - Authos{% endblock %}
+{% block title %}Apagar registro - Validador Educa Brasil{% endblock %}
 {% block content %}
 <section class="page-heading">
-  <div>
-    <p class="eyebrow">Confirmacao</p>
+  <div class="heading-meta">
+    <p class="eyebrow">Confirmação</p>
     <h1>Apagar registro</h1>
   </div>
 </section>
 
 <section class="form-panel danger-panel">
-  <p>Esta acao remove o registro, o status, a imagem PNG salva e torna a URL publica invalida.</p>
+  <p class="warning-text">Esta ação remove definitivamente o registro, o status, a imagem PNG salva e torna a URL pública inválida.</p>
+  
   <dl class="facts">
     <div>
       <dt>Nome</dt>
@@ -777,7 +798,7 @@ TEMPLATES = {
     </div>
   </dl>
 
-  <form method="post" action="{{ url_for('admin.delete_qrcode', record_id=record.id) }}">
+  <form class="form" method="post" action="{{ url_for('admin.delete_qrcode', record_id=record.id) }}">
     {{ form.hidden_tag() }}
     <div class="actions">
       {{ form.submit(class="button button-danger") }}
@@ -789,11 +810,11 @@ TEMPLATES = {
 """,
     "public/valid.html": """
 {% extends "base.html" %}
-{% block title %}QR valido - Authos{% endblock %}
+{% block title %}QR Válido - Validador Educa Brasil{% endblock %}
 {% block content %}
-<section class="verification">
-  <p class="eyebrow">QR valido</p>
-  <h1>Documento confirmado</h1>
+<section class="verification valid-verification">
+  <p class="eyebrow text-success">QR Válido</p>
+  <h1>Documento Confirmado</h1>
   <dl class="facts public-facts">
     <div>
       <dt>Nome</dt>
@@ -809,32 +830,36 @@ TEMPLATES = {
 """,
     "public/invalid.html": """
 {% extends "base.html" %}
-{% block title %}QR invalido - Authos{% endblock %}
+{% block title %}QR Inválido - Validador Educa Brasil{% endblock %}
 {% block content %}
 <section class="verification invalid">
-  <p class="eyebrow">QR invalido</p>
-  <h1>Codigo nao encontrado</h1>
-  <p>Este QR Code nao esta ativo no Authos.</p>
+  <p class="eyebrow text-danger">QR Inválido</p>
+  <h1>Código não encontrado</h1>
+  <p class="description-text">Este QR Code não está ativo ou não foi registrado no Validador Educa Brasil.</p>
 </section>
 {% endblock %}
 """,
 }
 
 
+# ==========================================
+# SEÇÃO CSS (100% FLEXBOX E RESPONSIVO)
+# ==========================================
 STYLES = """
 :root {
-  --bg: #f6f7f9;
+  --bg: #f8fafc;
   --surface: #ffffff;
-  --ink: #17202a;
-  --muted: #667085;
-  --line: #d8dee8;
-  --primary: #0f766e;
-  --primary-dark: #115e59;
-  --danger: #b42318;
-  --danger-soft: #fff1f0;
-  --success-soft: #ecfdf3;
-  --warning-soft: #fffaeb;
-  --shadow: 0 18px 38px rgba(23, 32, 42, 0.08);
+  --ink: #0f172a;
+  --muted: #64748b;
+  --line: #cbd5e1;
+  --primary: #1e40af;
+  --primary-dark: #1e3a8a;
+  --danger: #b91c1c;
+  --danger-soft: #fef2f2;
+  --success-soft: #f0fdf4;
+  --success: #15803d;
+  --warning-soft: #fffbeb;
+  --shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.05), 0 8px 10px -6px rgba(15, 23, 42, 0.05);
 }
 
 * {
@@ -848,47 +873,61 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--ink);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   font-size: 16px;
-  line-height: 1.5;
+  line-height: 1.6;
 }
 
 a {
-  color: var(--primary-dark);
+  color: var(--primary);
   text-decoration: none;
+  transition: color 0.15s ease;
 }
 
 a:hover {
+  color: var(--primary-dark);
   text-decoration: underline;
 }
 
+/* TOPBAR E BRANDING */
 .topbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 64px;
-  padding: 0 32px;
+  min-height: 70px;
+  padding: 0 2rem;
   border-bottom: 1px solid var(--line);
   background: var(--surface);
 }
 
 .brand {
-  color: var(--ink);
-  font-size: 1.25rem;
-  font-weight: 700;
-  letter-spacing: 0;
+  color: var(--primary);
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  text-decoration: none !important;
 }
 
 .nav {
   display: flex;
   align-items: center;
-  gap: 18px;
+  gap: 1.5rem;
 }
 
+.nav-form {
+  display: flex;
+  align-items: center;
+}
+
+/* LAYOUT E ESTRUTURA FLEXBOX */
 .shell {
-  flex: 1;
-  width: min(1120px, calc(100% - 32px));
-  margin: 32px auto;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 1120px;
+  margin: 2.5rem auto;
+  padding: 0 1.5rem;
 }
 
 .site-footer {
@@ -896,13 +935,14 @@ a:hover {
   align-items: center;
   justify-content: center;
   flex-wrap: wrap;
-  gap: 8px 18px;
-  width: min(1120px, calc(100% - 32px));
-  margin: 0 auto 24px;
-  padding-top: 18px;
+  gap: 0.5rem 1.5rem;
+  width: 100%;
+  max-width: 1120px;
+  margin: auto auto 2rem;
+  padding: 1.5rem 1.5rem 0;
   border-top: 1px solid var(--line);
   color: var(--muted);
-  font-size: 0.92rem;
+  font-size: 0.9rem;
   text-align: center;
 }
 
@@ -910,37 +950,42 @@ a:hover {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  margin-bottom: 2rem;
 }
 
-h1,
-h2,
-p {
-  margin-top: 0;
+.heading-meta {
+  display: flex;
+  flex-direction: column;
+}
+
+h1, h2, p {
+  margin: 0;
 }
 
 h1 {
-  margin-bottom: 0;
-  font-size: 2rem;
+  font-size: 2.25rem;
+  font-weight: 800;
+  letter-spacing: -0.025em;
   line-height: 1.2;
-  letter-spacing: 0;
 }
 
 h2 {
-  font-size: 1.25rem;
-  letter-spacing: 0;
+  font-size: 1.35rem;
+  font-weight: 700;
 }
 
 .eyebrow {
-  margin-bottom: 6px;
+  margin-bottom: 0.25rem;
   color: var(--muted);
-  font-size: 0.78rem;
+  font-size: 0.8rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 
+/* CONTAINER PANELS (FLEXBOX) */
 .auth-panel,
 .form-panel,
 .detail-panel,
@@ -949,88 +994,120 @@ h2 {
 .empty-state,
 .table-wrap {
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 12px;
   background: var(--surface);
   box-shadow: var(--shadow);
 }
 
 .auth-panel {
-  width: min(420px, 100%);
-  margin: 72px auto;
-  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 440px;
+  margin: 4rem auto;
+  padding: 2.5rem;
+}
+
+.auth-panel h1 {
+  margin-bottom: 2rem;
+  font-size: 1.75rem;
+  text-align: center;
 }
 
 .form-panel {
-  max-width: 640px;
-  padding: 28px;
+  width: 100%;
+  max-width: 680px;
+  padding: 2.5rem;
 }
 
 .danger-panel {
-  border-color: #fecdca;
+  border-color: #fca5a5;
 }
 
+/* FORMULÁRIOS FLEXBOX */
 .form {
-  display: grid;
-  gap: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
 label {
   color: var(--ink);
-  font-size: 0.92rem;
+  font-size: 0.9rem;
   font-weight: 700;
 }
 
 input {
   width: 100%;
-  min-height: 44px;
+  min-height: 48px;
   border: 1px solid var(--line);
-  border-radius: 6px;
-  padding: 10px 12px;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
   color: var(--ink);
   font: inherit;
   background: #ffffff;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 input:focus {
-  outline: 3px solid rgba(15, 118, 110, 0.18);
+  outline: none;
   border-color: var(--primary);
+  box-shadow: 0 0 0 4px rgba(30, 64, 175, 0.15);
 }
 
 .field-error {
   color: var(--danger);
-  font-size: 0.88rem;
+  font-size: 0.85rem;
+  font-weight: 600;
 }
 
 .muted-note {
-  margin: 0;
+  font-size: 0.875rem;
   color: var(--muted);
+  text-align: center;
+}
+
+.warning-text {
+  color: var(--danger);
+  font-weight: 600;
+  margin-bottom: 1.5rem;
 }
 
 .actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
-  margin-top: 12px;
+  gap: 1rem;
+  margin-top: 1rem;
 }
 
+/* BOTÕES (FLEXBOX) */
 .button,
-button {
+button,
+input[type="submit"] {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 42px;
+  min-height: 46px;
   border: 1px solid transparent;
-  border-radius: 6px;
-  padding: 9px 14px;
+  border-radius: 8px;
+  padding: 0.75rem 1.5rem;
   font: inherit;
   font-weight: 700;
   cursor: pointer;
   text-decoration: none;
   white-space: nowrap;
+  transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.05s ease;
 }
 
-.button:hover {
-  text-decoration: none;
+.button:active,
+button:active {
+  transform: scale(0.98);
 }
 
 .button-primary {
@@ -1040,6 +1117,7 @@ button {
 
 .button-primary:hover {
   background: var(--primary-dark);
+  text-decoration: none;
 }
 
 .button-secondary {
@@ -1048,19 +1126,31 @@ button {
   color: var(--ink);
 }
 
+.button-secondary:hover {
+  background: var(--bg);
+  text-decoration: none;
+}
+
 .button-danger {
   background: var(--danger);
   color: #ffffff;
 }
 
+.button-danger:hover {
+  background: #991b1b;
+  text-decoration: none;
+}
+
 .button-outline-danger {
-  border-color: #fecdca;
+  border-color: #fca5a5;
   background: var(--danger-soft);
   color: var(--danger);
 }
 
 .button-outline-danger:hover {
   border-color: var(--danger);
+  background: #fee2e2;
+  text-decoration: none;
 }
 
 .link-button {
@@ -1068,35 +1158,49 @@ button {
   border: 0;
   padding: 0;
   background: transparent;
-  color: var(--primary-dark);
+  color: var(--primary);
+  cursor: pointer;
+  font-weight: 600;
 }
 
+.link-button:hover {
+  color: var(--primary-dark);
+  text-decoration: underline;
+}
+
+/* FLASH NOTIFICATIONS (FLEXBOX) */
 .flash-stack {
-  display: grid;
-  gap: 10px;
-  margin-bottom: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 2rem;
 }
 
 .flash {
   margin: 0;
   border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 12px 14px;
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
   background: var(--surface);
+  font-weight: 500;
 }
 
 .flash-success {
-  border-color: #abefc6;
+  border-color: #86efac;
   background: var(--success-soft);
+  color: var(--success);
 }
 
 .flash-error,
 .flash-warning {
-  border-color: #fedf89;
+  border-color: #fde047;
   background: var(--warning-soft);
+  color: #854d0e;
 }
 
+/* TABELA */
 .table-wrap {
+  width: 100%;
   overflow-x: auto;
 }
 
@@ -1105,9 +1209,8 @@ table {
   border-collapse: collapse;
 }
 
-th,
-td {
-  padding: 14px 16px;
+th, td {
+  padding: 1rem 1.5rem;
   border-bottom: 1px solid var(--line);
   text-align: left;
   vertical-align: middle;
@@ -1115,7 +1218,9 @@ td {
 
 th {
   color: var(--muted);
-  font-size: 0.82rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
 }
 
@@ -1123,13 +1228,9 @@ tr:last-child td {
   border-bottom: 0;
 }
 
-.align-right {
-  text-align: right;
-}
-
 .row-actions {
-  display: inline-flex;
-  gap: 12px;
+  display: flex;
+  gap: 1rem;
   white-space: nowrap;
 }
 
@@ -1138,19 +1239,22 @@ tr:last-child td {
   font-weight: 700;
 }
 
+/* STATUS CHIPS */
 .status {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   min-height: 28px;
-  border-radius: 999px;
-  padding: 4px 10px;
+  border-radius: 9999px;
+  padding: 0.25rem 0.85rem;
   font-size: 0.85rem;
   font-weight: 700;
+  line-height: 1;
 }
 
 .status-active {
   background: var(--success-soft);
-  color: #067647;
+  color: var(--success);
 }
 
 .status-revoked {
@@ -1158,106 +1262,183 @@ tr:last-child td {
   color: var(--danger);
 }
 
+/* ESTRUTURA DOS DETALHES EM FLEXBOX */
 .detail-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
-  gap: 18px;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 2rem;
+  width: 100%;
 }
 
-.detail-panel,
-.qr-panel,
-.empty-state,
-.verification {
-  padding: 24px;
+.detail-panel {
+  flex: 1 1 0%;
+  display: flex;
+  flex-direction: column;
+  padding: 2.5rem;
+  min-width: 0;
+}
+
+.qr-panel {
+  flex: 0 0 360px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 2.5rem;
 }
 
 .facts {
-  display: grid;
-  gap: 16px;
-  margin: 0 0 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  margin: 0 0 2rem 0;
 }
 
 .facts div {
-  display: grid;
-  gap: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
 }
 
 .facts dt {
   color: var(--muted);
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   font-weight: 700;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
 }
 
 .facts dd {
   margin: 0;
-  font-size: 1.06rem;
+  font-size: 1.15rem;
   font-weight: 700;
 }
 
-.qr-panel {
-  display: grid;
-  gap: 14px;
-  align-content: start;
+.qr-image-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
 }
 
 .qr-image {
   width: 100%;
-  max-width: 312px;
+  max-width: 280px;
   aspect-ratio: 1 / 1;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 10px;
   padding: 10px;
   background: #ffffff;
 }
 
+.url-input-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.action-form {
+  display: flex;
+}
+
+/* EMPTY STATES (FLEXBOX) */
 .empty-state {
-  display: grid;
-  gap: 12px;
-  justify-items: start;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.25rem;
+  padding: 4rem 2rem;
+  text-align: center;
 }
 
 .empty-state.compact {
+  padding: 2rem;
   box-shadow: none;
 }
 
+/* VERIFICAÇÃO PÚBLICA (FLEXBOX) */
 .verification {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
   max-width: 680px;
-  margin: 56px auto;
+  margin: 4rem auto;
+  padding: 3rem;
 }
 
-.public-facts {
-  margin-bottom: 0;
+.verification h1 {
+  margin-bottom: 2rem;
+}
+
+.description-text {
+  color: var(--muted);
+  font-size: 1.05rem;
+}
+
+.text-success {
+  color: var(--success);
+}
+
+.text-danger {
+  color: var(--danger);
 }
 
 .invalid {
-  border-color: #fecdca;
-  background: #fffafa;
+  border-color: #fca5a5;
+  background: #fffbfa;
 }
 
-@media (max-width: 760px) {
-  .topbar,
-  .page-heading,
-  .nav {
-    align-items: flex-start;
+/* MEDIA QUERIES PARA RESPONSIVIDADE FLEXBOX */
+@media (max-width: 840px) {
+  .detail-grid {
     flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .qr-panel {
+    flex: 1 1 auto;
+    width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .topbar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1.25rem 1.5rem;
   }
 
-  .topbar {
-    gap: 12px;
-    padding: 16px;
+  .nav {
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .page-heading {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .page-heading .button {
+    width: 100%;
   }
 
   .shell {
-    margin: 20px auto;
-  }
-
-  .detail-grid {
-    grid-template-columns: 1fr;
+    margin: 1.5rem auto;
   }
 
   h1 {
-    font-size: 1.55rem;
+    font-size: 1.85rem;
+  }
+  
+  .auth-panel,
+  .form-panel,
+  .detail-panel,
+  .qr-panel,
+  .verification {
+    padding: 1.75rem;
   }
 }
 """
