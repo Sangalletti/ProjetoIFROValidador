@@ -1,5 +1,3 @@
-"""WSGI entry point for the Validador Educacional Brasil Flask application."""
-
 import sys
 from pathlib import Path
 

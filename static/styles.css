@@ -1,0 +1,595 @@
+:root {
+  --bg: #f8fafc;
+  --surface: #ffffff;
+  --ink: #0f172a;
+  --muted: #64748b;
+  --line: #cbd5e1;
+  --primary: #1e40af;
+  --primary-dark: #1e3a8a;
+  --danger: #b91c1c;
+  --danger-soft: #fef2f2;
+  --success-soft: #f0fdf4;
+  --success: #15803d;
+  --warning-soft: #fffbeb;
+  --shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.05), 0 8px 10px -6px rgba(15, 23, 42, 0.05);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+a {
+  color: var(--primary);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+a:hover {
+  color: var(--primary-dark);
+  text-decoration: underline;
+}
+
+/* TOPBAR E BRANDING */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 70px;
+  padding: 0 2rem;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.brand {
+  color: var(--primary);
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  text-decoration: none !important;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.nav-form {
+  display: flex;
+  align-items: center;
+}
+
+/* LAYOUT E ESTRUTURA FLEXBOX */
+.shell {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 1120px;
+  margin: 2.5rem auto;
+  padding: 0 1.5rem;
+}
+
+.site-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+  width: 100%;
+  max-width: 1120px;
+  margin: auto auto 2rem;
+  padding: 1.5rem 1.5rem 0;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.page-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  margin-bottom: 2rem;
+}
+
+.heading-meta {
+  display: flex;
+  flex-direction: column;
+}
+
+h1, h2, p {
+  margin: 0;
+}
+
+h1 {
+  font-size: 2.25rem;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+}
+
+h2 {
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.eyebrow {
+  margin-bottom: 0.25rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* CONTAINER PANELS (FLEXBOX) */
+.auth-panel,
+.form-panel,
+.detail-panel,
+.qr-panel,
+.verification,
+.empty-state,
+.table-wrap {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.auth-panel {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 440px;
+  margin: 4rem auto;
+  padding: 2.5rem;
+}
+
+.auth-panel h1 {
+  margin-bottom: 2rem;
+  font-size: 1.75rem;
+  text-align: center;
+}
+
+.form-panel {
+  width: 100%;
+  max-width: 680px;
+  padding: 2.5rem;
+}
+
+.danger-panel {
+  border-color: #fca5a5;
+}
+
+/* FORMULÁRIOS FLEXBOX */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+label {
+  color: var(--ink);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+input {
+  width: 100%;
+  min-height: 48px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  color: var(--ink);
+  font: inherit;
+  background: #ffffff;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px rgba(30, 64, 175, 0.15);
+}
+
+.field-error {
+  color: var(--danger);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.muted-note {
+  font-size: 0.875rem;
+  color: var(--muted);
+  text-align: center;
+}
+
+.warning-text {
+  color: var(--danger);
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+/* BOTÕES (FLEXBOX) */
+.button,
+button,
+input[type="submit"] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 0.75rem 1.5rem;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.05s ease;
+}
+
+.button:active,
+button:active {
+  transform: scale(0.98);
+}
+
+.button-primary {
+  background: var(--primary);
+  color: #ffffff;
+}
+
+.button-primary:hover {
+  background: var(--primary-dark);
+  text-decoration: none;
+}
+
+.button-secondary {
+  border-color: var(--line);
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.button-secondary:hover {
+  background: var(--bg);
+  text-decoration: none;
+}
+
+.button-danger {
+  background: var(--danger);
+  color: #ffffff;
+}
+
+.button-danger:hover {
+  background: #991b1b;
+  text-decoration: none;
+}
+
+.button-outline-danger {
+  border-color: #fca5a5;
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.button-outline-danger:hover {
+  border-color: var(--danger);
+  background: #fee2e2;
+  text-decoration: none;
+}
+
+.link-button {
+  min-height: auto;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--primary);
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.link-button:hover {
+  color: var(--primary-dark);
+  text-decoration: underline;
+}
+
+/* FLASH NOTIFICATIONS (FLEXBOX) */
+.flash-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 2rem;
+}
+
+.flash {
+  margin: 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  background: var(--surface);
+  font-weight: 500;
+}
+
+.flash-success {
+  border-color: #86efac;
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.flash-error,
+.flash-warning {
+  border-color: #fde047;
+  background: var(--warning-soft);
+  color: #854d0e;
+}
+
+/* TABELA */
+.table-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th, td {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: middle;
+}
+
+th {
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+tr:last-child td {
+  border-bottom: 0;
+}
+
+.row-actions {
+  display: flex;
+  gap: 1rem;
+  white-space: nowrap;
+}
+
+.danger-text {
+  color: var(--danger);
+  font-weight: 700;
+}
+
+/* STATUS CHIPS */
+.status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  border-radius: 9999px;
+  padding: 0.25rem 0.85rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.status-active {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.status-revoked {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+/* ESTRUTURA DOS DETALHES EM FLEXBOX */
+.detail-grid {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 2rem;
+  width: 100%;
+}
+
+.detail-panel {
+  flex: 1 1 0%;
+  display: flex;
+  flex-direction: column;
+  padding: 2.5rem;
+  min-width: 0;
+}
+
+.qr-panel {
+  flex: 0 0 360px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 2.5rem;
+}
+
+.facts {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  margin: 0 0 2rem 0;
+}
+
+.facts div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.facts dt {
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.facts dd {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.qr-image-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+}
+
+.qr-image {
+  width: 100%;
+  max-width: 280px;
+  aspect-ratio: 1 / 1;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px;
+  background: #ffffff;
+}
+
+.url-input-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.action-form {
+  display: flex;
+}
+
+/* EMPTY STATES (FLEXBOX) */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.25rem;
+  padding: 4rem 2rem;
+  text-align: center;
+}
+
+.empty-state.compact {
+  padding: 2rem;
+  box-shadow: none;
+}
+
+/* VERIFICAÇÃO PÚBLICA (FLEXBOX) */
+.verification {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 680px;
+  margin: 4rem auto;
+  padding: 3rem;
+}
+
+.verification h1 {
+  margin-bottom: 2rem;
+}
+
+.description-text {
+  color: var(--muted);
+  font-size: 1.05rem;
+}
+
+.text-success {
+  color: var(--success);
+}
+
+.text-danger {
+  color: var(--danger);
+}
+
+.invalid {
+  border-color: #fca5a5;
+  background: #fffbfa;
+}
+
+/* MEDIA QUERIES PARA RESPONSIVIDADE FLEXBOX */
+@media (max-width: 840px) {
+  .detail-grid {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .qr-panel {
+    flex: 1 1 auto;
+    width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .topbar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1.25rem 1.5rem;
+  }
+
+  .nav {
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .page-heading {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .page-heading .button {
+    width: 100%;
+  }
+
+  .shell {
+    margin: 1.5rem auto;
+  }
+
+  h1 {
+    font-size: 1.85rem;
+  }
+
+  .auth-panel,
+  .form-panel,
+  .detail-panel,
+  .qr-panel,
+  .verification {
+    padding: 1.75rem;
+  }
+}

@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}QR Válido - Validador Educa Brasil{% endblock %}
+{% block content %}
+<section class="verification valid-verification">
+  <p class="eyebrow text-success">QR Válido</p>
+  <h1>Documento Confirmado</h1>
+  <dl class="facts public-facts">
+    <div>
+      <dt>Nome</dt>
+      <dd>{{ record.full_name }}</dd>
+    </div>
+    <div>
+      <dt>CPF</dt>
+      <dd>{{ record.formatted_cpf }}</dd>
+    </div>
+  </dl>
+</section>
+{% endblock %}

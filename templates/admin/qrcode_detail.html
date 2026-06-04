@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}QR Code - Validador Educa Brasil{% endblock %}
+{% block content %}
+<section class="page-heading detail-header">
+  <div class="heading-meta">
+    <p class="eyebrow">Registro</p>
+    <h1>{{ record.full_name }}</h1>
+  </div>
+  <span class="status {{ 'status-active' if record.is_active else 'status-revoked' }}">{{ record.status_label }}</span>
+</section>
+
+<div class="detail-grid">
+  <section class="detail-panel">
+    <dl class="facts">
+      <div>
+        <dt>CPF</dt>
+        <dd>{{ record.formatted_cpf }}</dd>
+      </div>
+      <div>
+        <dt>Criado em</dt>
+        <dd>{{ record.created_at.strftime("%d/%m/%Y %H:%M") }}</dd>
+      </div>
+      {% if record.revoked_at %}
+        <div>
+          <dt>Revogado em</dt>
+          <dd>{{ record.revoked_at.strftime("%d/%m/%Y %H:%M") }}</dd>
+        </div>
+      {% endif %}
+    </dl>
+
+    <div class="actions">
+      {% if record.is_active %}
+        <form class="action-form" method="post" action="{{ url_for('admin.revoke_qrcode', record_id=record.id) }}">
+          {{ logout_form.csrf_token }}
+          <button class="button button-danger" type="submit">Revogar QR Code</button>
+        </form>
+      {% endif %}
+      <a class="button button-outline-danger" href="{{ url_for('admin.delete_qrcode_confirm', record_id=record.id) }}">Apagar registro</a>
+    </div>
+  </section>
+
+  <section class="qr-panel">
+    {% if record.is_active and (public_url or record.qr_png) %}
+      <div class="qr-image-container">
+        <img class="qr-image" src="{{ url_for('admin.qrcode_png', record_id=record.id) }}" alt="QR Code Validador Educa Brasil">
+      </div>
+      {% if public_url %}
+        <div class="url-input-container">
+          <label for="public-url">URL pública</label>
+          <input id="public-url" value="{{ public_url }}" readonly>
+        </div>
+      {% else %}
+        <p class="muted-note">URL indisponível nesta sessão, mas o PNG salvo pode ser baixado.</p>
+      {% endif %}
+      <a class="button button-primary" href="{{ url_for('admin.qrcode_png', record_id=record.id, download=1) }}">Baixar PNG</a>
+    {% else %}
+      <div class="empty-state compact">
+        <h2>Imagem indisponível</h2>
+        <p>Crie outro QR Code para gerar uma nova imagem.</p>
+      </div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

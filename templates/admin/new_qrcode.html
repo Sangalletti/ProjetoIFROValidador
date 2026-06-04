@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Novo QR Code - Validador Educa Brasil{% endblock %}
+{% block content %}
+<section class="page-heading">
+  <div class="heading-meta">
+    <p class="eyebrow">Novo registro</p>
+    <h1>Criar QR Code</h1>
+  </div>
+</section>
+
+<section class="form-panel">
+  <form class="form" method="post" novalidate>
+    {{ form.hidden_tag() }}
+
+    <div class="form-group">
+      <label for="{{ form.full_name.id }}">{{ form.full_name.label.text }}</label>
+      {{ form.full_name(autocomplete="name", placeholder="Nome da pessoa") }}
+      {% for error in form.full_name.errors %}
+        <span class="field-error">{{ error }}</span>
+      {% endfor %}
+    </div>
+
+    <div class="form-group">
+      <label for="{{ form.cpf.id }}">{{ form.cpf.label.text }}</label>
+      {{ form.cpf(inputmode="numeric", autocomplete="off", placeholder="000.000.000-00") }}
+      {% for error in form.cpf.errors %}
+        <span class="field-error">{{ error }}</span>
+      {% endfor %}
+    </div>
+
+    <div class="actions">
+      {{ form.submit(class="button button-primary") }}
+      <a class="button button-secondary" href="{{ url_for('admin.qrcodes') }}">Cancelar</a>
+    </div>
+  </form>
+</section>
+{% endblock %}
