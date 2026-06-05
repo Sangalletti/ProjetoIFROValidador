@@ -35,8 +35,36 @@
   </main>
 
   <footer class="site-footer">
-    <span>validadoreducabrasil.com.br</span>
-    <a href="mailto:validadoreducabrasil@yahoo.com">validadoreducabrasil@yahoo.com</a>
+    <div class="footer-content">
+      <div class="footer-section">
+        <span class="footer-title">Endereço</span>
+        <p>Rodovia RO-257, Km 13,<br>
+           Sentido Machadinho do Oeste (Zona Rural),<br>
+           Ariquemes/RO.</p>
+      </div>
+
+      <div class="footer-section">
+        <span class="footer-title">Contato</span>
+        <a href="mailto:validadoreducabrasil@yahoo.com">validadoreducabrasil@yahoo.com</a>
+        <a href="https://wa.me/5569992241711" target="_blank" rel="noopener noreferrer">+55 69 992241711</a>
+      </div>
+
+      <div class="footer-section description-column">
+        <span class="footer-title">Sobre o Projeto</span>
+        <p>Projeto desenvolvido no IFRO Campus Ariquemes com o objetivo de gerar, validar e armazenar certificados educacionais com total segurança e autenticidade.</p>
+      </div>
+
+      <div class="footer-section">
+        <span class="footer-title">Parceiros</span>
+        <div class="partner-logos">
+          <img src="{{ url_for('static', filename='img/ifro.png') }}" alt="Logo IFRO" class="footer-logo">
+        </div>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <span>&copy; 2026 validadoreducabrasil.com.br - Todos os direitos reservados.</span>
+    </div>
   </footer>
 </body>
 </html>

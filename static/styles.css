@@ -1,21 +1,112 @@
+/* ============================================================
+   DESIGN TOKENS
+   Todos os valores ajustáveis ficam aqui. Mudar uma variável
+   atualiza automaticamente toda a interface.
+   ============================================================ */
 :root {
-  --bg: #f8fafc;
-  --surface: #ffffff;
-  --ink: #0f172a;
-  --muted: #64748b;
-  --line: #cbd5e1;
-  --primary: #1e40af;
-  --primary-dark: #1e3a8a;
-  --danger: #b91c1c;
-  --danger-soft: #fef2f2;
-  --success-soft: #f0fdf4;
-  --success: #15803d;
-  --warning-soft: #fffbeb;
-  --shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.05), 0 8px 10px -6px rgba(15, 23, 42, 0.05);
+  /* Superfícies */
+  --bg:             #ffffff;
+  --surface:        #ffffff;
+  --surface-hover:  #f1f5f9;
+
+  /* Texto */
+  --ink:            #0f172a;
+  --ink-2:          #334155;
+  --muted:          #64748b;
+
+  /* Bordas */
+  --line:           #e2e8f0;
+  --line-strong:    #cbd5e1;
+
+  /* Marca (Primary) */
+  --primary:        #1e40af;
+  --primary-dark:   #1e3a8a;
+  --primary-light:  #dbeafe;
+  --primary-ring:   rgba(30, 64, 175, 0.18);
+
+  /* Semântica — Danger */
+  --danger:         #b91c1c;
+  --danger-dark:    #991b1b;
+  --danger-soft:    #fef2f2;
+  --danger-border:  #fca5a5;
+  --danger-ring:    rgba(185, 28, 28, 0.15);
+
+  /* Semântica — Success */
+  --success:        #15803d;
+  --success-soft:   #f0fdf4;
+  --success-border: #86efac;
+
+  /* Semântica — Warning */
+  --warning:        #92400e;
+  --warning-soft:   #fffbeb;
+  --warning-border: #fde047;
+
+  /* Sombras (escala de elevação) */
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, .05);
+  --shadow:    0 4px 6px -1px rgba(15, 23, 42, .07),
+               0 2px 4px -2px rgba(15, 23, 42, .05);
+  --shadow-md: 0 10px 25px -5px rgba(15, 23, 42, .08),
+               0 8px 10px -6px rgba(15, 23, 42, .05);
+  --shadow-lg: 0 20px 40px -10px rgba(15, 23, 42, .12),
+               0 10px 20px -8px rgba(15, 23, 42, .06);
+
+  /* Espaçamento (base 8px) */
+  --sp-1:  .25rem;   /*  4px */
+  --sp-2:  .5rem;    /*  8px */
+  --sp-3:  .75rem;   /* 12px */
+  --sp-4:  1rem;     /* 16px */
+  --sp-5:  1.25rem;  /* 20px */
+  --sp-6:  1.5rem;   /* 24px */
+  --sp-7:  1.75rem;  /* 28px */
+  --sp-8:  2rem;     /* 32px */
+  --sp-10: 2.5rem;   /* 40px */
+  --sp-12: 3rem;     /* 48px */
+  --sp-16: 4rem;     /* 64px */
+
+  /* Raios de borda */
+  --r-sm:   6px;
+  --r-md:   8px;
+  --r-lg:   12px;
+  --r-full: 9999px;
+
+  /* Escala tipográfica */
+  --font:   -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+            Helvetica, Arial, sans-serif;
+  --t-xs:   .75rem;    /* 12px */
+  --t-sm:   .875rem;   /* 14px */
+  --t-base: 1rem;      /* 16px */
+  --t-lg:   1.125rem;  /* 18px */
+  --t-xl:   1.25rem;   /* 20px */
+  --t-2xl:  1.5rem;    /* 24px */
+  --t-3xl:  1.875rem;  /* 30px */
+  --t-4xl:  2.25rem;   /* 36px */
+
+  /* Transições */
+  --ease:  cubic-bezier(.4, 0, .2, 1);
+  --dur:   150ms;
+  --dur2:  250ms;
+
+  /* Layout */
+  --max-w:    1120px;
+  --topbar-h: 70px;
 }
 
-* {
+
+
+/* ============================================================
+   RESET & BASE
+   ============================================================ */
+*,
+*::before,
+*::after {
   box-sizing: border-box;
+}
+
+html {
+  /* Evita inflação de texto em mobile */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  scroll-behavior: smooth;
 }
 
 body {
@@ -25,15 +116,40 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--ink);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  font-size: 16px;
+  font-family: var(--font);
+  font-size: var(--t-base);
   line-height: 1.6;
+  /* Suavização de fontes */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
+h1, h2, h3, h4, h5, h6, p {
+  margin: 0;
+}
+
+img, svg {
+  display: block;
+  max-width: 100%;
+}
+
+/* Foco visível somente na navegação por teclado —
+   remove o outline irritante ao clicar com o mouse */
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
+
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Links base */
 a {
   color: var(--primary);
   text-decoration: none;
-  transition: color 0.15s ease;
+  transition: color var(--dur) var(--ease);
 }
 
 a:hover {
@@ -41,29 +157,51 @@ a:hover {
   text-decoration: underline;
 }
 
-/* TOPBAR E BRANDING */
+/* ============================================================
+   TOPBAR & NAVEGAÇÃO
+   Sticky com efeito de vidro fosco em browsers modernos
+   ============================================================ */
 .topbar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 70px;
-  padding: 0 2rem;
+  min-height: var(--topbar-h);
+  padding: 0 var(--sp-8);
   border-bottom: 1px solid var(--line);
   background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Frosted glass — melhoria progressiva */
+@supports (backdrop-filter: blur(1px)) {
+  .topbar {
+    background: color-mix(in srgb, var(--surface) 90%, transparent);
+    backdrop-filter: saturate(180%) blur(12px);
+    -webkit-backdrop-filter: saturate(180%) blur(12px);
+  }
 }
 
 .brand {
   color: var(--primary);
   font-size: 1.35rem;
   font-weight: 800;
-  letter-spacing: -0.025em;
+  letter-spacing: -.025em;
+  text-decoration: none !important;
+  transition: opacity var(--dur) var(--ease);
+}
+
+.brand:hover {
+  opacity: .8;
   text-decoration: none !important;
 }
 
 .nav {
   display: flex;
   align-items: center;
-  gap: 1.5rem;
+  gap: var(--sp-6);
 }
 
 .nav-form {
@@ -71,40 +209,54 @@ a:hover {
   align-items: center;
 }
 
-/* LAYOUT E ESTRUTURA FLEXBOX */
+/* ============================================================
+   LAYOUT PRINCIPAL
+   ============================================================ */
 .shell {
   flex: 1 1 auto;
   display: flex;
   flex-direction: column;
   width: 100%;
-  max-width: 1120px;
-  margin: 2.5rem auto;
-  padding: 0 1.5rem;
+  max-width: var(--max-w);
+  margin: var(--sp-10) auto;
+  padding: 0 var(--sp-6);
 }
 
-.site-footer {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 0.5rem 1.5rem;
-  width: 100%;
-  max-width: 1120px;
-  margin: auto auto 2rem;
-  padding: 1.5rem 1.5rem 0;
-  border-top: 1px solid var(--line);
+/* ============================================================
+   TIPOGRAFIA
+   ============================================================ */
+h1 {
+  font-size: var(--t-4xl);
+  font-weight: 800;
+  letter-spacing: -.03em;
+  line-height: 1.15;
+}
+
+h2 {
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -.01em;
+}
+
+.eyebrow {
+  margin-bottom: var(--sp-1);
   color: var(--muted);
-  font-size: 0.9rem;
-  text-align: center;
+  font-size: var(--t-xs);
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
 }
 
+/* ============================================================
+   CABEÇALHO DE PÁGINA
+   ============================================================ */
 .page-heading {
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 1.25rem;
-  margin-bottom: 2rem;
+  gap: var(--sp-5);
+  margin-bottom: var(--sp-8);
 }
 
 .heading-meta {
@@ -112,32 +264,11 @@ a:hover {
   flex-direction: column;
 }
 
-h1, h2, p {
-  margin: 0;
-}
+/* ============================================================
+   PAINÉIS & CONTÊINERES
+   ============================================================ */
 
-h1 {
-  font-size: 2.25rem;
-  font-weight: 800;
-  letter-spacing: -0.025em;
-  line-height: 1.2;
-}
-
-h2 {
-  font-size: 1.35rem;
-  font-weight: 700;
-}
-
-.eyebrow {
-  margin-bottom: 0.25rem;
-  color: var(--muted);
-  font-size: 0.8rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
-/* CONTAINER PANELS (FLEXBOX) */
+/* Base compartilhada por todos os painéis */
 .auth-panel,
 .form-panel,
 .detail-panel,
@@ -146,9 +277,9 @@ h2 {
 .empty-state,
 .table-wrap {
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: var(--r-lg);
   background: var(--surface);
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow-md);
 }
 
 .auth-panel {
@@ -156,12 +287,12 @@ h2 {
   flex-direction: column;
   width: 100%;
   max-width: 440px;
-  margin: 4rem auto;
-  padding: 2.5rem;
+  margin: var(--sp-16) auto;
+  padding: var(--sp-10);
 }
 
 .auth-panel h1 {
-  margin-bottom: 2rem;
+  margin-bottom: var(--sp-8);
   font-size: 1.75rem;
   text-align: center;
 }
@@ -169,58 +300,97 @@ h2 {
 .form-panel {
   width: 100%;
   max-width: 680px;
-  padding: 2.5rem;
+  padding: var(--sp-10);
 }
 
 .danger-panel {
-  border-color: #fca5a5;
+  border-color: var(--danger-border);
 }
 
-/* FORMULÁRIOS FLEXBOX */
+/* ============================================================
+   FORMULÁRIOS
+   ============================================================ */
 .form {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: var(--sp-6);
 }
 
 .form-group {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: var(--sp-2);
 }
 
 label {
   color: var(--ink);
-  font-size: 0.9rem;
+  font-size: var(--t-sm);
   font-weight: 700;
 }
 
-input {
+/* Seleciona inputs de texto, evitando quebrar checkbox/radio */
+input:not([type="checkbox"]):not([type="radio"]),
+textarea,
+select {
   width: 100%;
   min-height: 48px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 0.75rem 1rem;
+  border: 1.5px solid var(--line-strong);
+  border-radius: var(--r-md);
+  padding: var(--sp-3) var(--sp-4);
   color: var(--ink);
   font: inherit;
-  background: #ffffff;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  font-size: var(--t-base);
+  background: var(--surface);
+  appearance: none;
+  -webkit-appearance: none;
+  transition: border-color var(--dur) var(--ease),
+              box-shadow var(--dur) var(--ease),
+              background-color var(--dur) var(--ease);
 }
 
-input:focus {
+input::placeholder,
+textarea::placeholder {
+  color: var(--muted);
+}
+
+/* Hover sutil antes do foco */
+input:not([type="checkbox"]):not([type="radio"]):hover:not(:focus):not(:disabled),
+textarea:hover:not(:focus):not(:disabled),
+select:hover:not(:focus):not(:disabled) {
+  border-color: var(--primary);
+}
+
+input:not([type="checkbox"]):not([type="radio"]):focus,
+textarea:focus,
+select:focus {
   outline: none;
   border-color: var(--primary);
-  box-shadow: 0 0 0 4px rgba(30, 64, 175, 0.15);
+  box-shadow: 0 0 0 4px var(--primary-ring);
+}
+
+input:disabled,
+textarea:disabled,
+select:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+  background: var(--bg);
+}
+
+/* Remove spinners de input[type=number] */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
 .field-error {
   color: var(--danger);
-  font-size: 0.85rem;
+  font-size: var(--t-sm);
   font-weight: 600;
 }
 
 .muted-note {
-  font-size: 0.875rem;
+  font-size: var(--t-sm);
   color: var(--muted);
   text-align: center;
 }
@@ -228,73 +398,115 @@ input:focus {
 .warning-text {
   color: var(--danger);
   font-weight: 600;
-  margin-bottom: 1.5rem;
+  margin-bottom: var(--sp-6);
 }
 
 .actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 1rem;
-  margin-top: 1rem;
+  gap: var(--sp-4);
+  margin-top: var(--sp-4);
 }
 
-/* BOTÕES (FLEXBOX) */
+/* Estado de input inválido */
+.invalid {
+  border-color: var(--danger-border) !important;
+  background: #fffbfa !important;
+  box-shadow: 0 0 0 4px var(--danger-ring) !important;
+}
+
+/* ============================================================
+   BOTÕES
+   ============================================================ */
 .button,
 button,
 input[type="submit"] {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 46px;
-  border: 1px solid transparent;
-  border-radius: 8px;
-  padding: 0.75rem 1.5rem;
+  gap: var(--sp-2);
+  min-height: 44px;
+  border: 1.5px solid transparent;
+  border-radius: var(--r-md);
+  padding: .625rem var(--sp-6);
   font: inherit;
+  font-size: var(--t-sm);
   font-weight: 700;
+  letter-spacing: .01em;
   cursor: pointer;
   text-decoration: none;
   white-space: nowrap;
-  transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.05s ease;
+  transition: background-color var(--dur) var(--ease),
+              border-color var(--dur) var(--ease),
+              box-shadow var(--dur) var(--ease),
+              opacity var(--dur) var(--ease),
+              transform 80ms var(--ease);
 }
 
+/* Leve afundamento no clique — mais tátil */
 .button:active,
-button:active {
-  transform: scale(0.98);
+button:active,
+input[type="submit"]:active {
+  transform: translateY(1px);
 }
 
+/* Estado desabilitado */
+.button:disabled,
+button:disabled,
+input[type="submit"]:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* — Primário — */
 .button-primary {
   background: var(--primary);
+  border-color: var(--primary);
   color: #ffffff;
 }
 
 .button-primary:hover {
   background: var(--primary-dark);
+  border-color: var(--primary-dark);
+  box-shadow: 0 4px 14px var(--primary-ring);
+  color: #ffffff;
   text-decoration: none;
 }
 
+/* — Secundário — */
 .button-secondary {
-  border-color: var(--line);
+  border-color: var(--line-strong);
   background: var(--surface);
   color: var(--ink);
 }
 
 .button-secondary:hover {
-  background: var(--bg);
+  background: var(--surface-hover);
+  border-color: var(--line-strong);
+  box-shadow: var(--shadow-sm);
+  color: var(--ink);
   text-decoration: none;
 }
 
+/* — Danger — */
 .button-danger {
   background: var(--danger);
+  border-color: var(--danger);
   color: #ffffff;
 }
 
 .button-danger:hover {
-  background: #991b1b;
+  background: var(--danger-dark);
+  border-color: var(--danger-dark);
+  box-shadow: 0 4px 14px var(--danger-ring);
+  color: #ffffff;
   text-decoration: none;
 }
 
+/* — Danger Outline — */
 .button-outline-danger {
-  border-color: #fca5a5;
+  border-color: var(--danger-border);
   background: var(--danger-soft);
   color: var(--danger);
 }
@@ -305,6 +517,7 @@ button:active {
   text-decoration: none;
 }
 
+/* — Ghost / Link — */
 .link-button {
   min-height: auto;
   border: 0;
@@ -312,7 +525,9 @@ button:active {
   background: transparent;
   color: var(--primary);
   cursor: pointer;
+  font-size: var(--t-sm);
   font-weight: 600;
+  letter-spacing: 0;
 }
 
 .link-button:hover {
@@ -320,40 +535,84 @@ button:active {
   text-decoration: underline;
 }
 
-/* FLASH NOTIFICATIONS (FLEXBOX) */
+/* ============================================================
+   FLASH NOTIFICATIONS
+   ============================================================ */
 .flash-stack {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-  margin-bottom: 2rem;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-8);
 }
 
 .flash {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
   margin: 0;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 1rem 1.25rem;
+  border: 1.5px solid var(--line-strong);
+  border-radius: var(--r-lg);
+  padding: var(--sp-4) var(--sp-5);
   background: var(--surface);
+  font-size: var(--t-sm);
   font-weight: 500;
+  /* Entrada animada */
+  animation: flash-in var(--dur2) var(--ease) both;
+}
+
+@keyframes flash-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .flash-success {
-  border-color: #86efac;
+  border-color: var(--success-border);
   background: var(--success-soft);
   color: var(--success);
 }
 
 .flash-error,
 .flash-warning {
-  border-color: #fde047;
+  border-color: var(--warning-border);
   background: var(--warning-soft);
-  color: #854d0e;
+  color: var(--warning);
 }
 
-/* TABELA */
+.flash-danger {
+  border-color: var(--danger-border);
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+/* ============================================================
+   TABELA
+   ============================================================ */
 .table-wrap {
   width: 100%;
   overflow-x: auto;
+  /* Scrollbar discreto no Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+
+/* Scrollbar discreto no WebKit */
+.table-wrap::-webkit-scrollbar {
+  height: 6px;
+}
+
+.table-wrap::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.table-wrap::-webkit-scrollbar-thumb {
+  background: var(--line-strong);
+  border-radius: var(--r-full);
 }
 
 table {
@@ -361,28 +620,43 @@ table {
   border-collapse: collapse;
 }
 
-th, td {
-  padding: 1rem 1.5rem;
+th {
+  padding: var(--sp-3) var(--sp-6);
+  border-bottom: 1.5px solid var(--line);
+  background: var(--bg);
+  color: var(--muted);
+  font-size: var(--t-xs);
+  font-weight: 700;
+  letter-spacing: .07em;
+  text-align: left;
+  text-transform: uppercase;
+  vertical-align: middle;
+  user-select: none;
+}
+
+td {
+  padding: var(--sp-4) var(--sp-6);
   border-bottom: 1px solid var(--line);
   text-align: left;
   vertical-align: middle;
-}
-
-th {
-  color: var(--muted);
-  font-size: 0.8rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
+  color: var(--ink-2);
+  font-size: var(--t-sm);
+  transition: background-color var(--dur) var(--ease);
 }
 
 tr:last-child td {
   border-bottom: 0;
 }
 
+/* Hover na linha — facilita leitura */
+tbody tr:hover td {
+  background: var(--surface-hover);
+}
+
 .row-actions {
   display: flex;
-  gap: 1rem;
+  align-items: center;
+  gap: var(--sp-4);
   white-space: nowrap;
 }
 
@@ -391,17 +665,33 @@ tr:last-child td {
   font-weight: 700;
 }
 
-/* STATUS CHIPS */
+/* ============================================================
+   STATUS CHIPS
+   ============================================================ */
 .status {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 28px;
-  border-radius: 9999px;
-  padding: 0.25rem 0.85rem;
-  font-size: 0.85rem;
+  gap: var(--sp-1);
+  min-height: 26px;
+  border-radius: var(--r-full);
+  padding: .2rem var(--sp-3);
+  font-size: var(--t-xs);
   font-weight: 700;
+  letter-spacing: .04em;
   line-height: 1;
+  text-transform: uppercase;
+}
+
+/* Ponto de status — indicador visual rápido */
+.status::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: var(--r-full);
+  background: currentColor;
+  flex-shrink: 0;
 }
 
 .status-active {
@@ -414,12 +704,14 @@ tr:last-child td {
   color: var(--danger);
 }
 
-/* ESTRUTURA DOS DETALHES EM FLEXBOX */
+/* ============================================================
+   LAYOUT DE DETALHE (duas colunas com flexbox)
+   ============================================================ */
 .detail-grid {
   display: flex;
   flex-direction: row;
   align-items: flex-start;
-  gap: 2rem;
+  gap: var(--sp-8);
   width: 100%;
 }
 
@@ -427,36 +719,36 @@ tr:last-child td {
   flex: 1 1 0%;
   display: flex;
   flex-direction: column;
-  padding: 2.5rem;
-  min-width: 0;
+  padding: var(--sp-10);
+  min-width: 0; /* previne overflow em flex */
 }
 
 .qr-panel {
   flex: 0 0 360px;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
-  padding: 2.5rem;
+  gap: var(--sp-6);
+  padding: var(--sp-10);
 }
 
 .facts {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
-  margin: 0 0 2rem 0;
+  gap: var(--sp-6);
+  margin: 0 0 var(--sp-8) 0;
 }
 
 .facts div {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: var(--sp-1);
 }
 
 .facts dt {
   color: var(--muted);
-  font-size: 0.8rem;
+  font-size: var(--t-xs);
   font-weight: 700;
-  letter-spacing: 0.05em;
+  letter-spacing: .07em;
   text-transform: uppercase;
 }
 
@@ -466,6 +758,9 @@ tr:last-child td {
   font-weight: 700;
 }
 
+/* ============================================================
+   QR CODE
+   ============================================================ */
 .qr-image-container {
   display: flex;
   justify-content: center;
@@ -478,49 +773,65 @@ tr:last-child td {
   max-width: 280px;
   aspect-ratio: 1 / 1;
   border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 10px;
+  border-radius: var(--r-lg);
+  padding: var(--sp-3);
   background: #ffffff;
+  box-shadow: var(--shadow);
+  transition: box-shadow var(--dur) var(--ease);
+}
+
+.qr-image:hover {
+  box-shadow: var(--shadow-md);
 }
 
 .url-input-container {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: var(--sp-2);
 }
 
 .action-form {
   display: flex;
 }
 
-/* EMPTY STATES (FLEXBOX) */
+/* ============================================================
+   EMPTY STATES
+   ============================================================ */
 .empty-state {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 1.25rem;
-  padding: 4rem 2rem;
+  gap: var(--sp-5);
+  padding: var(--sp-16) var(--sp-8);
   text-align: center;
 }
 
+.empty-state .empty-icon {
+  font-size: 2.5rem;
+  opacity: .4;
+  line-height: 1;
+}
+
 .empty-state.compact {
-  padding: 2rem;
+  padding: var(--sp-8);
   box-shadow: none;
 }
 
-/* VERIFICAÇÃO PÚBLICA (FLEXBOX) */
+/* ============================================================
+   VERIFICAÇÃO PÚBLICA
+   ============================================================ */
 .verification {
   display: flex;
   flex-direction: column;
   width: 100%;
   max-width: 680px;
-  margin: 4rem auto;
-  padding: 3rem;
+  margin: var(--sp-16) auto;
+  padding: var(--sp-12);
 }
 
 .verification h1 {
-  margin-bottom: 2rem;
+  margin-bottom: var(--sp-8);
 }
 
 .description-text {
@@ -528,20 +839,152 @@ tr:last-child td {
   font-size: 1.05rem;
 }
 
-.text-success {
-  color: var(--success);
+/* ============================================================
+   UTILITÁRIOS DE TEXTO
+   ============================================================ */
+.text-success { color: var(--success); }
+.text-danger  { color: var(--danger);  }
+.text-muted   { color: var(--muted);   }
+.text-ink     { color: var(--ink);     }
+
+/* Visível apenas para leitores de tela (acessibilidade) */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
 }
 
-.text-danger {
-  color: var(--danger);
+/* ============================================================
+   RODAPÉ
+   ============================================================ */
+.site-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: var(--max-w);
+  margin: var(--sp-16) auto var(--sp-8);
+  padding: var(--sp-12) var(--sp-6) var(--sp-8);
+  border-top: 2px solid var(--line);
+  color: var(--muted);
+  font-size: var(--t-sm);
 }
 
-.invalid {
-  border-color: #fca5a5;
-  background: #fffbfa;
+.footer-content {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--sp-10);
+  width: 100%;
+  max-width: var(--max-w);
+  margin-bottom: var(--sp-12);
+  text-align: left;
 }
 
-/* MEDIA QUERIES PARA RESPONSIVIDADE FLEXBOX */
+.footer-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.footer-title {
+  color: var(--ink);
+  font-size: var(--t-sm);
+  font-weight: 800;
+  letter-spacing: .07em;
+  margin-bottom: var(--sp-1);
+  text-transform: uppercase;
+}
+
+.footer-section p,
+.footer-section a {
+  color: var(--muted);
+  font-size: var(--t-sm);
+  margin: 0;
+  transition: color var(--dur) var(--ease);
+}
+
+.footer-section a:hover {
+  color: var(--primary);
+  text-decoration: none;
+}
+
+.footer-logo {
+  max-width: 120px;
+  height: auto;
+  opacity: .75;
+  transition: opacity var(--dur) var(--ease);
+}
+
+.footer-logo:hover {
+  opacity: 1;
+}
+
+.footer-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--sp-4);
+  width: 100%;
+  max-width: var(--max-w);
+  border-top: 1px solid var(--line);
+  padding-top: var(--sp-6);
+  font-size: var(--t-xs);
+  color: var(--muted);
+}
+
+/* ============================================================
+   ESTILOS DE IMPRESSÃO
+   ============================================================ */
+@media print {
+  .topbar,
+  .nav,
+  .actions,
+  .row-actions,
+  .site-footer {
+    display: none !important;
+  }
+
+  body {
+    background: white;
+    color: black;
+    font-size: 12pt;
+  }
+
+  .shell {
+    max-width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  .auth-panel,
+  .form-panel,
+  .detail-panel,
+  .qr-panel,
+  .table-wrap {
+    border: 1px solid #ccc;
+    box-shadow: none;
+  }
+
+  /* Mostra URLs dos links no print */
+  a[href]:not(.button):not(button)::after {
+    content: " (" attr(href) ")";
+    font-size: .8em;
+    color: #666;
+  }
+}
+
+/* ============================================================
+   RESPONSIVIDADE
+   ============================================================ */
+
+/* Tablet */
 @media (max-width: 840px) {
   .detail-grid {
     flex-direction: column;
@@ -554,18 +997,19 @@ tr:last-child td {
   }
 }
 
+/* Mobile */
 @media (max-width: 768px) {
   .topbar {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 1rem;
-    padding: 1.25rem 1.5rem;
+    min-height: auto;
+    flex-wrap: wrap;
+    gap: var(--sp-4);
+    padding: var(--sp-5) var(--sp-6);
   }
 
   .nav {
     width: 100%;
     flex-wrap: wrap;
-    gap: 1rem;
+    gap: var(--sp-4);
   }
 
   .page-heading {
@@ -578,11 +1022,11 @@ tr:last-child td {
   }
 
   .shell {
-    margin: 1.5rem auto;
+    margin: var(--sp-6) auto;
   }
 
   h1 {
-    font-size: 1.85rem;
+    font-size: var(--t-3xl);
   }
 
   .auth-panel,
@@ -590,6 +1034,29 @@ tr:last-child td {
   .detail-panel,
   .qr-panel,
   .verification {
-    padding: 1.75rem;
+    padding: var(--sp-7);
+  }
+
+  th,
+  td {
+    padding: var(--sp-3) var(--sp-4);
+  }
+}
+
+/* Mobile pequeno */
+@media (max-width: 480px) {
+  .auth-panel,
+  .form-panel {
+    padding: var(--sp-6);
+  }
+
+  .footer-content {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+
+  .footer-bottom {
+    justify-content: center;
+    text-align: center;
   }
 }
