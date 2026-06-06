@@ -13,6 +13,7 @@
       <nav class="nav">
         <a href="{{ url_for('admin.qrcodes') }}">Registros</a>
         <a href="{{ url_for('admin.new_qrcode') }}">Novo QR</a>
+        <a href="{{ url_for('admin.cadastrar_certificado') }}">Certificados</a>
         <form class="nav-form" method="post" action="{{ url_for('admin.logout') }}">
           {{ logout_form.csrf_token }}
           <button class="link-button" type="submit">Sair</button>
@@ -38,9 +39,7 @@
     <div class="footer-content">
       <div class="footer-section">
         <span class="footer-title">Endereço</span>
-        <p>Rodovia RO-257, Km 13,<br>
-           Sentido Machadinho do Oeste (Zona Rural),<br>
-           Ariquemes/RO.</p>
+        <p></p>
       </div>
 
       <div class="footer-section">
@@ -51,14 +50,12 @@
 
       <div class="footer-section description-column">
         <span class="footer-title">Sobre o Projeto</span>
-        <p>Projeto desenvolvido no IFRO Campus Ariquemes com o objetivo de gerar, validar e armazenar certificados educacionais com total segurança e autenticidade.</p>
+        <p></p>
       </div>
 
       <div class="footer-section">
-        <span class="footer-title">Parceiros</span>
-        <div class="partner-logos">
-          <img src="{{ url_for('static', filename='img/ifro.png') }}" alt="Logo IFRO" class="footer-logo">
-        </div>
+        <span class="footer-title">Validador</span>
+        <p>Sistema de validação de documentos via QR Code.</p>
       </div>
     </div>
 

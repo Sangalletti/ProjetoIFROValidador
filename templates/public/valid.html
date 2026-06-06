@@ -1,9 +1,12 @@
 {% extends "base.html" %}
 {% block title %}QR Válido - Validador Educa Brasil{% endblock %}
+
 {% block content %}
 <section class="verification valid-verification">
   <p class="eyebrow text-success">QR Válido</p>
   <h1>Documento Confirmado</h1>
+  <p class="description-text">Este QR Code está ativo e registrado no Validador Educa Brasil.</p>
+
   <dl class="facts public-facts">
     <div>
       <dt>Nome</dt>
@@ -13,6 +16,24 @@
       <dt>CPF</dt>
       <dd>{{ record.formatted_cpf }}</dd>
     </div>
+    {% if certificate %}
+    <div>
+      <dt>Curso</dt>
+      <dd>{{ certificate.curso }}</dd>
+    </div>
+    <div>
+      <dt>Instituição</dt>
+      <dd>{{ certificate.instituicao }}</dd>
+    </div>
+    {% endif %}
   </dl>
+
+  {% if certificate %}
+  <div class="certificate-actions">
+    <a href="{{ url_for('public.download_public_certificate', certificate_id=certificate.id) }}" class="download-btn">
+      Baixar Certificado
+    </a>
+  </div>
+  {% endif %}
 </section>
 {% endblock %}

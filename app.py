@@ -131,6 +131,13 @@ class QrRecord(db.Model):
     created_at = db.Column(db.DateTime(timezone=True), default=utc_now, nullable=False)
     revoked_at = db.Column(db.DateTime(timezone=True), nullable=True)
 
+    certificate = db.relationship(
+        "Certificate",
+        back_populates="qr_record",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
+
     @property
     def formatted_cpf(self):
         return format_cpf(self.cpf)
@@ -138,6 +145,30 @@ class QrRecord(db.Model):
     @property
     def status_label(self):
         return "Ativo" if self.is_active else "Revogado"
+
+
+class Certificate(db.Model):
+    __tablename__ = "certificates"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    qr_record_id = db.Column(
+        db.Integer,
+        db.ForeignKey("qr_records.id", ondelete="CASCADE"),
+        nullable=False,
+        unique=True,
+    )
+
+    titular = db.Column(db.String(200), nullable=False)
+    tipo = db.Column(db.String(200), nullable=False)
+    data_emissao = db.Column(db.DateTime, nullable=False)
+    curso = db.Column(db.String(200), nullable=False)
+    instituicao = db.Column(db.String(200), nullable=False)
+
+    pdf_filename = db.Column(db.String(255))
+    pdf_data = db.Column(db.LargeBinary)
+
+    qr_record = db.relationship("QrRecord", back_populates="certificate")
 
 
 class LoginForm(FlaskForm):
@@ -171,7 +202,9 @@ class TokenGenerationError(RuntimeError):
 
 
 def build_public_url(token):
-    base_url = current_app_config("BASE_URL").rstrip("/")
+    base_url = current_app_config("BASE_URL").strip().rstrip("/")
+    if not base_url.startswith(("http://", "https://")):
+        base_url = f"https://{base_url}"
     return f"{base_url}{url_for('public.validate_qr', token=token)}"
 
 
@@ -292,6 +325,132 @@ def qrcodes():
     records = QrRecord.query.order_by(QrRecord.created_at.desc()).all()
     return render_template("admin/qrcodes.html", records=records)
 
+def _parse_emission_datetime(value):
+    if not value:
+        raise ValueError("Informe a data de emissão.")
+    return datetime.fromisoformat(value)
+
+
+@admin_bp.route("/certificados/cadastrar", methods=["GET", "POST"])
+@login_required
+def cadastrar_certificado():
+    records = (
+        QrRecord.query.filter_by(is_active=True)
+        .outerjoin(Certificate)
+        .filter(Certificate.id.is_(None))
+        .order_by(QrRecord.full_name)
+        .all()
+    )
+
+    if request.method == "POST":
+        qr_record_id = request.form.get("qr_record_id", "").strip()
+        titular = request.form.get("titular", "").strip()
+        tipo = request.form.get("tipo", "").strip()
+        curso = request.form.get("curso", "").strip()
+        instituicao = request.form.get("instituicao", "").strip()
+        pdf = request.files.get("pdf_certificado")
+
+        if not qr_record_id:
+            flash("Selecione um QR Code.", "error")
+            return redirect(url_for("admin.cadastrar_certificado"))
+
+        record = QrRecord.query.filter_by(id=qr_record_id, is_active=True).first()
+        if not record:
+            flash("QR Code inválido ou inativo.", "error")
+            return redirect(url_for("admin.cadastrar_certificado"))
+
+        if Certificate.query.filter_by(qr_record_id=record.id).first():
+            flash("Este QR Code já possui um certificado vinculado.", "error")
+            return redirect(url_for("admin.cadastrar_certificado"))
+
+        if not pdf or not pdf.filename:
+            flash("Envie o arquivo PDF do certificado.", "error")
+            return redirect(url_for("admin.cadastrar_certificado"))
+
+        if not pdf.filename.lower().endswith(".pdf"):
+            flash("O arquivo deve estar no formato PDF.", "error")
+            return redirect(url_for("admin.cadastrar_certificado"))
+
+        pdf_bytes = pdf.read()
+        if not pdf_bytes:
+            flash("O arquivo PDF está vazio.", "error")
+            return redirect(url_for("admin.cadastrar_certificado"))
+
+        try:
+            data_emissao = _parse_emission_datetime(request.form.get("data_emissao"))
+        except ValueError:
+            flash("Data de emissão inválida.", "error")
+            return redirect(url_for("admin.cadastrar_certificado"))
+
+        if not all([titular, tipo, curso, instituicao]):
+            flash("Preencha todos os campos obrigatórios.", "error")
+            return redirect(url_for("admin.cadastrar_certificado"))
+
+        certificate = Certificate(
+            qr_record_id=record.id,
+            titular=titular,
+            tipo=tipo,
+            data_emissao=data_emissao,
+            curso=curso,
+            instituicao=instituicao,
+            pdf_filename=pdf.filename,
+            pdf_data=pdf_bytes,
+        )
+
+        db.session.add(certificate)
+
+        try:
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            flash("Este QR Code já possui um certificado vinculado.", "error")
+            return redirect(url_for("admin.cadastrar_certificado"))
+
+        flash("Certificado cadastrado com sucesso.", "success")
+        return redirect(url_for("admin.certificado_detail", certificate_id=certificate.id))
+
+    return render_template("admin/cadastrar_certificado.html", records=records)
+
+@public_bp.get("/certificados/<int:certificate_id>")
+def download_public_certificate(certificate_id):
+    certificate = db.get_or_404(Certificate, certificate_id)
+
+    if not certificate.pdf_data:
+        abort(404)
+
+    record = certificate.qr_record
+    if not record or not record.is_active:
+        abort(404)
+
+    return send_file(
+        BytesIO(certificate.pdf_data),
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name=certificate.pdf_filename or "certificado.pdf",
+    )
+
+@public_bp.get("/v/<token>")
+def validate_qr(token):
+
+    token_digest = hash_token(token)
+
+    record = QrRecord.query.filter_by(
+        token_hash=token_digest,
+        is_active=True
+    ).first()
+
+    if not record:
+        return render_template("public/invalid.html"), 404
+
+    certificate = Certificate.query.filter_by(
+        qr_record_id=record.id
+    ).first()
+
+    return render_template(
+        "public/valid.html",
+        record=record,
+        certificate=certificate
+    )
 
 @admin_bp.route("/qrcodes/new", methods=["GET", "POST"])
 @login_required
@@ -313,6 +472,39 @@ def new_qrcode():
 
     return render_template("admin/new_qrcode.html", form=form)
 
+@admin_bp.get("/certificados/<int:certificate_id>")
+@login_required
+def certificado_detail(certificate_id):
+    certificate = db.get_or_404(Certificate, certificate_id)
+    return render_template("admin/certificado_detail.html", certificate=certificate)
+
+
+@admin_bp.get("/certificados/<int:certificate_id>/delete")
+@login_required
+def delete_certificado_confirm(certificate_id):
+    certificate = db.get_or_404(Certificate, certificate_id)
+    return render_template(
+        "admin/delete_certificado.html",
+        certificate=certificate,
+        form=DeleteRecordForm(),
+    )
+
+
+@admin_bp.post("/certificados/<int:certificate_id>/delete")
+@login_required
+def delete_certificado(certificate_id):
+    form = DeleteRecordForm()
+    if not form.validate_on_submit():
+        abort(400)
+
+    certificate = db.get_or_404(Certificate, certificate_id)
+    titular = certificate.titular
+    db.session.delete(certificate)
+    db.session.commit()
+    current_app.logger.info(f"Certificado deletado: ID={certificate_id}, titular={titular}")
+    flash("Certificado removido.", "success")
+    return redirect(url_for("admin.qrcodes"))
+
 
 @admin_bp.get("/qrcodes/<int:record_id>")
 @login_required
@@ -320,7 +512,13 @@ def qrcode_detail(record_id):
     record = db.get_or_404(QrRecord, record_id)
     token = _remembered_token_for(record)
     public_url = build_public_url(token) if token else None
-    return render_template("admin/qrcode_detail.html", record=record, public_url=public_url)
+    certificate = Certificate.query.filter_by(qr_record_id=record.id).first()
+    return render_template(
+        "admin/qrcode_detail.html",
+        record=record,
+        public_url=public_url,
+        certificate=certificate,
+    )
 
 
 @admin_bp.get("/qrcodes/<int:record_id>/png")
@@ -384,17 +582,6 @@ def delete_qrcode(record_id):
     flash("Registro apagado.", "success")
     return redirect(url_for("admin.qrcodes"))
 
-
-@public_bp.get("/v/<token>")
-def validate_qr(token):
-    token_digest = hash_token(token)
-    record = QrRecord.query.filter_by(token_hash=token_digest, is_active=True).first()
-    if not record:
-        return render_template("public/invalid.html"), 404
-
-    return render_template("public/valid.html", record=record)
-
-
 def _safe_next_url():
     target = request.args.get("next")
     if target and target.startswith("/") and not target.startswith("//"):
@@ -437,7 +624,10 @@ def _setup_logging(app):
 
 def _validate_config(app):
     base_url = app.config.get("BASE_URL", "").strip()
-    if not base_url or base_url == "validadoreducabrasil.com.br":
+    if not base_url or base_url in {
+        "validadoreducabrasil.com.br",
+        "https://validadoreducabrasil.com.br",
+    }:
         app.logger.warning("BASE_URL usando valor padrão. Configure para produção.")
 
 
@@ -456,7 +646,7 @@ def create_app(test_config=None):
     app.config.update(
         SECRET_KEY=secret_key or "test-key-do-not-use",
         SQLALCHEMY_DATABASE_URI=os.environ.get("DATABASE_URL", "sqlite:///validador_educa_brasil.sqlite3"),
-        BASE_URL=os.environ.get("BASE_URL", "validadoreducabrasil.com.br"),
+        BASE_URL=os.environ.get("BASE_URL", "https://validadoreducabrasil.com.br"),
         DEBUG=_env_bool("DEBUG", False),
         TESTING=bool(test_config),
     )
@@ -527,6 +717,8 @@ def create_app(test_config=None):
     def handle_500_error(error):
         current_app.logger.error(f"Erro interno: {error}", exc_info=True)
         flash("Erro interno do servidor. Tente novamente mais tarde.", "error")
+        if current_user.is_authenticated:
+            return redirect(url_for("admin.qrcodes")), 500
         return redirect(url_for("admin.login")), 500
 
     _register_cli(app)
@@ -563,6 +755,19 @@ def _register_cli(app):
         db.session.commit()
         click.echo(f"Admin criado: {username}")
 
+def _sqlite_table_columns(table_name):
+    rows = db.session.execute(text(f"PRAGMA table_info({table_name})")).fetchall()
+    return {row[1] for row in rows}
+
+
+def _sqlite_add_column_if_missing(table_name, column_name, column_type):
+    if column_name not in _sqlite_table_columns(table_name):
+        db.session.execute(
+            text(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type}")
+        )
+        return True
+    return False
+
 
 def _ensure_schema(app):
     with app.app_context():
@@ -570,12 +775,14 @@ def _ensure_schema(app):
         if db.engine.dialect.name != "sqlite":
             return
 
-        columns = {
-            row[1]
-            for row in db.session.execute(text("PRAGMA table_info(qr_records)")).fetchall()
-        }
-        if "qr_png" not in columns:
-            db.session.execute(text("ALTER TABLE qr_records ADD COLUMN qr_png BLOB"))
+        changed = False
+        changed |= _sqlite_add_column_if_missing("qr_records", "qr_png", "BLOB")
+
+        if _sqlite_table_columns("certificates"):
+            changed |= _sqlite_add_column_if_missing("certificates", "pdf_filename", "VARCHAR(255)")
+            changed |= _sqlite_add_column_if_missing("certificates", "pdf_data", "BLOB")
+
+        if changed:
             db.session.commit()
 
 

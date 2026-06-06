@@ -26,6 +26,16 @@
           <dd>{{ record.revoked_at.strftime("%d/%m/%Y %H:%M") }}</dd>
         </div>
       {% endif %}
+      {% if certificate %}
+        <div>
+          <dt>Certificado</dt>
+          <dd>
+            <a href="{{ url_for('admin.certificado_detail', certificate_id=certificate.id) }}">
+              {{ certificate.titular }} — {{ certificate.curso }}
+            </a>
+          </dd>
+        </div>
+      {% endif %}
     </dl>
 
     <div class="actions">

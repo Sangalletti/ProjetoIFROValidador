@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Remover certificado - Validador Educa Brasil{% endblock %}
+{% block content %}
+<section class="page-heading">
+  <div class="heading-meta">
+    <p class="eyebrow">Confirmação</p>
+    <h1>Remover certificado</h1>
+  </div>
+</section>
+
+<section class="form-panel danger-panel">
+  <p class="warning-text">Esta ação remove o certificado PDF vinculado ao QR Code. O QR Code permanece ativo.</p>
+
+  <dl class="facts">
+    <div>
+      <dt>Titular</dt>
+      <dd>{{ certificate.titular }}</dd>
+    </div>
+    <div>
+      <dt>Curso</dt>
+      <dd>{{ certificate.curso }}</dd>
+    </div>
+    <div>
+      <dt>Instituição</dt>
+      <dd>{{ certificate.instituicao }}</dd>
+    </div>
+  </dl>
+
+  <form class="form" method="post" action="{{ url_for('admin.delete_certificado', certificate_id=certificate.id) }}">
+    {{ form.hidden_tag() }}
+    <div class="actions">
+      {{ form.submit(class="button button-danger", value="Remover certificado") }}
+      <a class="button button-secondary" href="{{ url_for('admin.certificado_detail', certificate_id=certificate.id) }}">Cancelar</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

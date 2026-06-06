@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Cadastrar Certificado - Validador Educa Brasil{% endblock %}
+{% block content %}
+<section class="page-heading">
+  <div class="heading-meta">
+    <p class="eyebrow">Admin</p>
+    <h1>Cadastrar Certificado</h1>
+  </div>
+  <a class="button button-secondary" href="{{ url_for('admin.qrcodes') }}">Voltar</a>
+</section>
+
+{% if records %}
+<section class="form-panel">
+  <form class="form" method="post" enctype="multipart/form-data" novalidate>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <div class="form-group">
+      <label for="qr_record_id">QR Code</label>
+      <select id="qr_record_id" name="qr_record_id" required>
+        {% for record in records %}
+        <option value="{{ record.id }}">
+          {{ record.full_name }} — {{ record.formatted_cpf }}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="titular">Titular</label>
+      <input id="titular" type="text" name="titular" required placeholder="Nome do titular do certificado">
+    </div>
+
+    <div class="form-group">
+      <label for="tipo">Tipo</label>
+      <input id="tipo" type="text" name="tipo" required placeholder="Ex.: Certificado de conclusão">
+    </div>
+
+    <div class="form-group">
+      <label for="data_emissao">Data de Emissão</label>
+      <input id="data_emissao" type="datetime-local" name="data_emissao" required>
+    </div>
+
+    <div class="form-group">
+      <label for="curso">Curso</label>
+      <input id="curso" type="text" name="curso" required placeholder="Nome do curso">
+    </div>
+
+    <div class="form-group">
+      <label for="instituicao">Instituição</label>
+      <input id="instituicao" type="text" name="instituicao" required placeholder="Instituição emissora">
+    </div>
+
+    <div class="form-group">
+      <label for="pdf_certificado">PDF do Certificado</label>
+      <input id="pdf_certificado" type="file" name="pdf_certificado" accept=".pdf,application/pdf" required>
+      <span class="muted-note field-hint">Apenas arquivos PDF, até 10 MB.</span>
+    </div>
+
+    <div class="actions">
+      <button class="button button-primary" type="submit">Salvar Certificado</button>
+      <a class="button button-secondary" href="{{ url_for('admin.qrcodes') }}">Cancelar</a>
+    </div>
+  </form>
+</section>
+{% else %}
+<section class="empty-state">
+  <h2>Nenhum QR Code disponível</h2>
+  <p class="description-text">Crie um QR Code ativo sem certificado vinculado antes de cadastrar.</p>
+  <div class="actions">
+    <a class="button button-primary" href="{{ url_for('admin.new_qrcode') }}">Criar QR Code</a>
+    <a class="button button-secondary" href="{{ url_for('admin.qrcodes') }}">Voltar</a>
+  </div>
+</section>
+{% endif %}
+{% endblock %}

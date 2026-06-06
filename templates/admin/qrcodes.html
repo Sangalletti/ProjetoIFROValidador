@@ -6,47 +6,78 @@
     <p class="eyebrow">Admin</p>
     <h1>QR Codes</h1>
   </div>
-  <a class="button button-primary" href="{{ url_for('admin.new_qrcode') }}">Criar QR Code</a>
+
+  <div class="actions">
+    <a class="button button-primary" href="{{ url_for('admin.new_qrcode') }}">
+      Criar QR Code
+    </a>
+
+    <a class="button button-secondary" href="{{ url_for('admin.cadastrar_certificado') }}">
+      Cadastrar Certificado
+    </a>
+  </div>
 </section>
 
 {% if records %}
-  <div class="table-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th>Nome</th>
-          <th>CPF</th>
-          <th>Status</th>
-          <th>Criado em</th>
-          <th>Ações</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for record in records %}
-          <tr>
-            <td>{{ record.full_name }}</td>
-            <td>{{ record.formatted_cpf }}</td>
-            <td>
-              <span class="status {{ 'status-active' if record.is_active else 'status-revoked' }}">
-                {{ record.status_label }}
-              </span>
-            </td>
-            <td>{{ record.created_at.strftime("%d/%m/%Y %H:%M") }}</td>
-            <td>
-              <div class="row-actions">
-                <a href="{{ url_for('admin.qrcode_detail', record_id=record.id) }}">Abrir</a>
-                <a class="danger-text" href="{{ url_for('admin.delete_qrcode_confirm', record_id=record.id) }}">Apagar</a>
-              </div>
-            </td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Nome</th>
+        <th>CPF</th>
+        <th>Status</th>
+        <th>Certificado</th>
+        <th>Criado em</th>
+        <th>Ações</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for record in records %}
+      <tr>
+        <td>{{ record.full_name }}</td>
+        <td>{{ record.formatted_cpf }}</td>
+        <td>
+          <span class="status {{ 'status-active' if record.is_active else 'status-revoked' }}">
+            {{ record.status_label }}
+          </span>
+        </td>
+        <td>
+          {% if record.certificate %}
+          <a href="{{ url_for('admin.certificado_detail', certificate_id=record.certificate.id) }}">Ver</a>
+          {% else %}
+          <span class="text-muted">—</span>
+          {% endif %}
+        </td>
+        <td>{{ record.created_at.strftime("%d/%m/%Y %H:%M") }}</td>
+        <td>
+          <div class="row-actions">
+            <a href="{{ url_for('admin.qrcode_detail', record_id=record.id) }}">
+              Abrir
+            </a>
+
+            <a class="danger-text" href="{{ url_for('admin.delete_qrcode_confirm', record_id=record.id) }}">
+              Apagar
+            </a>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
 {% else %}
-  <section class="empty-state">
-    <h2>Nenhum QR Code criado</h2>
-    <a class="button button-primary" href="{{ url_for('admin.new_qrcode') }}">Criar primeiro QR</a>
-  </section>
+<section class="empty-state">
+  <h2>Nenhum QR Code criado</h2>
+
+  <div class="actions">
+    <a class="button button-primary" href="{{ url_for('admin.new_qrcode') }}">
+      Criar primeiro QR
+    </a>
+
+    <a class="button button-secondary" href="{{ url_for('admin.cadastrar_certificado') }}">
+      Cadastrar Certificado
+    </a>
+  </div>
+</section>
 {% endif %}
 {% endblock %}

@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Detalhes do Certificado{% endblock %}
+
+{% block content %}
+<section class="page-heading">
+  <div class="heading-meta">
+    <p class="eyebrow">Certificados</p>
+    <h1>Detalhes do Certificado</h1>
+  </div>
+
+  <a href="{{ url_for('admin.cadastrar_certificado') }}" class="button button-secondary">
+    Novo Certificado
+  </a>
+</section>
+
+<section class="detail-panel">
+  <h2>Informações do Certificado</h2>
+
+  <div class="details-grid">
+    <div class="detail-item">
+      <span class="detail-label">Titular do Documento</span>
+      <span class="detail-value">{{ certificate.titular }}</span>
+    </div>
+
+    <div class="detail-item">
+      <span class="detail-label">Tipo</span>
+      <span class="detail-value">{{ certificate.tipo }}</span>
+    </div>
+
+    <div class="detail-item">
+      <span class="detail-label">Data de Emissão</span>
+      <span class="detail-value">{{ certificate.data_emissao.strftime('%d/%m/%Y %H:%M') }}</span>
+    </div>
+
+    <div class="detail-item">
+      <span class="detail-label">Curso</span>
+      <span class="detail-value">{{ certificate.curso }}</span>
+    </div>
+
+    <div class="detail-item">
+      <span class="detail-label">Instituição Responsável</span>
+      <span class="detail-value">{{ certificate.instituicao }}</span>
+    </div>
+
+    <div class="detail-item">
+      <span class="detail-label">QR Code Vinculado</span>
+      <span class="detail-value">
+        {% if certificate.qr_record %}
+        <a href="{{ url_for('admin.qrcode_detail', record_id=certificate.qr_record_id) }}">
+          {{ certificate.qr_record.full_name }} — {{ certificate.qr_record.formatted_cpf }}
+        </a>
+        {% else %}
+        #{{ certificate.qr_record_id }}
+        {% endif %}
+      </span>
+    </div>
+
+    <div class="detail-item">
+      <span class="detail-label">Arquivo PDF</span>
+      <span class="detail-value">{{ certificate.pdf_filename or '—' }}</span>
+    </div>
+  </div>
+
+  <div class="actions-bar">
+    <a href="{{ url_for('public.download_public_certificate', certificate_id=certificate.id) }}" class="button button-primary">
+      Baixar Certificado
+    </a>
+    <a href="{{ url_for('admin.qrcodes') }}" class="button button-secondary">
+      Voltar
+    </a>
+    <a href="{{ url_for('admin.delete_certificado_confirm', certificate_id=certificate.id) }}" class="button button-outline-danger">
+      Remover
+    </a>
+  </div>
+</section>
+{% endblock %}
