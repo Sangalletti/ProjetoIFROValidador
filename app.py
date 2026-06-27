@@ -201,10 +201,24 @@ class TokenGenerationError(RuntimeError):
     pass
 
 
-def build_public_url(token):
-    base_url = current_app_config("BASE_URL").strip().rstrip("/")
+def normalize_base_url(base_url):
+    base_url = (base_url or "").strip().rstrip("/")
+    if not base_url:
+        return "https://www.validadoreducabrasil.com.br"
     if not base_url.startswith(("http://", "https://")):
         base_url = f"https://{base_url}"
+
+    for scheme in ("https://", "http://"):
+        without_www = f"{scheme}validadoreducabrasil.com.br"
+        with_www = f"{scheme}www.validadoreducabrasil.com.br"
+        if base_url == without_www or base_url.startswith(f"{without_www}/"):
+            return base_url.replace(without_www, with_www, 1).rstrip("/")
+
+    return base_url
+
+
+def build_public_url(token):
+    base_url = normalize_base_url(current_app_config("BASE_URL"))
     return f"{base_url}{url_for('public.validate_qr', token=token)}"
 
 
@@ -623,11 +637,9 @@ def _setup_logging(app):
 
 
 def _validate_config(app):
-    base_url = app.config.get("BASE_URL", "").strip()
-    if not base_url or base_url in {
-        "validadoreducabrasil.com.br",
-        "https://validadoreducabrasil.com.br",
-    }:
+    base_url = normalize_base_url(app.config.get("BASE_URL", ""))
+    app.config["BASE_URL"] = base_url
+    if base_url == "https://www.validadoreducabrasil.com.br":
         app.logger.warning("BASE_URL usando valor padrão. Configure para produção.")
 
 
@@ -646,7 +658,7 @@ def create_app(test_config=None):
     app.config.update(
         SECRET_KEY=secret_key or "test-key-do-not-use",
         SQLALCHEMY_DATABASE_URI=os.environ.get("DATABASE_URL", "sqlite:///validador_educa_brasil.sqlite3"),
-        BASE_URL=os.environ.get("BASE_URL", "https://validadoreducabrasil.com.br"),
+        BASE_URL=os.environ.get("BASE_URL", "https://www.validadoreducabrasil.com.br"),
         DEBUG=_env_bool("DEBUG", False),
         TESTING=bool(test_config),
     )
