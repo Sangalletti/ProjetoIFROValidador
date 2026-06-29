@@ -3,9 +3,11 @@ import logging
 import os
 import re
 import secrets
+from collections import defaultdict, deque
 from datetime import datetime, timezone
 from io import BytesIO
 from pathlib import Path
+from time import monotonic
 
 import click
 import qrcode
@@ -30,8 +32,10 @@ from flask_wtf.csrf import CSRFError
 from jinja2 import FileSystemLoader
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
+from werkzeug.exceptions import RequestEntityTooLarge
 from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.security import check_password_hash, generate_password_hash
+from werkzeug.utils import secure_filename
 from wtforms import PasswordField, StringField, SubmitField
 from wtforms.validators import DataRequired, Length, ValidationError
 
@@ -43,6 +47,23 @@ def _env_bool(name, default=False):
     return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
+def _env_int(name, default):
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    try:
+        return int(value)
+    except ValueError:
+        return default
+
+
+CERTIFICATE_PDF_MAX_BYTES = 10 * 1024 * 1024
+PDF_SIGNATURE = b"%PDF-"
+LOGIN_IP_RATE_LIMITS = ((60, 10), (3600, 50))
+LOGIN_USER_RATE_LIMITS = ((60, 5), (3600, 20))
+_rate_limit_events = defaultdict(deque)
+
+
 class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ECHO = False
@@ -51,7 +72,12 @@ class Config:
     SESSION_COOKIE_SAMESITE = "Lax"
     SESSION_COOKIE_SECURE = True
     PERMANENT_SESSION_LIFETIME = 3600
-    WTF_CSRF_TIME_LIMIT = None
+    WTF_CSRF_TIME_LIMIT = 3600
+    MAX_CONTENT_LENGTH = CERTIFICATE_PDF_MAX_BYTES
+    TRUST_PROXY = False
+    PROXY_FIX_X_FOR = 1
+    PROXY_FIX_X_PROTO = 1
+    PROXY_FIX_X_HOST = 1
     DEBUG = False
     TESTING = False
 
@@ -81,6 +107,13 @@ def format_cpf(value):
     if len(digits) != 11:
         return value or ""
     return f"{digits[:3]}.{digits[3:6]}.{digits[6:9]}-{digits[9:]}"
+
+
+def mask_cpf(value):
+    digits = CPF_DIGITS.sub("", value or "")
+    if len(digits) != 11:
+        return ""
+    return f"***.***.***-{digits[-2:]}"
 
 
 def hash_token(token):
@@ -141,6 +174,10 @@ class QrRecord(db.Model):
     @property
     def formatted_cpf(self):
         return format_cpf(self.cpf)
+
+    @property
+    def masked_cpf(self):
+        return mask_cpf(self.cpf)
 
     @property
     def status_label(self):
@@ -286,6 +323,49 @@ def qr_png_bytes_for_url(url):
     return qr_png_for_url(url).getvalue()
 
 
+def _safe_pdf_filename(filename):
+    sanitized = secure_filename(filename or "")
+    if not sanitized:
+        return ""
+    return sanitized
+
+
+def _read_certificate_pdf(upload):
+    pdf_bytes = upload.read(CERTIFICATE_PDF_MAX_BYTES + 1)
+    if len(pdf_bytes) > CERTIFICATE_PDF_MAX_BYTES:
+        raise ValueError("O arquivo PDF deve ter no máximo 10 MB.")
+    if not pdf_bytes:
+        raise ValueError("O arquivo PDF está vazio.")
+    if not pdf_bytes.startswith(PDF_SIGNATURE):
+        raise ValueError("Arquivo PDF inválido.")
+    return pdf_bytes
+
+
+def _send_certificate_pdf(certificate):
+    filename = _safe_pdf_filename(certificate.pdf_filename) or "certificado.pdf"
+    if not filename.lower().endswith(".pdf"):
+        filename = f"{filename}.pdf"
+
+    return send_file(
+        BytesIO(certificate.pdf_data),
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name=filename,
+    )
+
+
+def _find_active_record_by_token(token):
+    token = (token or "").strip()
+    if not token:
+        return None
+
+    token_digest = hash_token(token)
+    return QrRecord.query.filter_by(
+        token_hash=token_digest,
+        is_active=True,
+    ).first()
+
+
 @admin_bp.app_context_processor
 def inject_forms():
     return {"logout_form": LogoutForm(), "delete_record_form": DeleteRecordForm()}
@@ -306,9 +386,16 @@ def login():
     form = LoginForm()
     if form.validate_on_submit():
         username = form.username.data.strip()
+        if _login_rate_limited(username):
+            current_app.logger.warning(f"Login bloqueado por limite de tentativas: {username}")
+            flash("Muitas tentativas de login. Aguarde alguns minutos e tente novamente.", "error")
+            return render_template("admin/login.html", form=form), 429
+
         user = AdminUser.query.filter_by(username=username).first()
 
         if user and user.check_password(form.password.data):
+            _clear_login_rate_limit(username)
+            session.permanent = True
             login_user(user)
             current_app.logger.info(f"Login bem-sucedido: {username}")
             flash("Login realizado com sucesso.", "success")
@@ -345,16 +432,20 @@ def _parse_emission_datetime(value):
     return datetime.fromisoformat(value)
 
 
-@admin_bp.route("/certificados/cadastrar", methods=["GET", "POST"])
-@login_required
-def cadastrar_certificado():
-    records = (
+def _available_qr_records_for_certificate():
+    return (
         QrRecord.query.filter_by(is_active=True)
         .outerjoin(Certificate)
         .filter(Certificate.id.is_(None))
         .order_by(QrRecord.full_name)
         .all()
     )
+
+
+@admin_bp.route("/certificados/cadastrar", methods=["GET", "POST"])
+@login_required
+def cadastrar_certificado():
+    records = _available_qr_records_for_certificate()
 
     if request.method == "POST":
         qr_record_id = request.form.get("qr_record_id", "").strip()
@@ -381,13 +472,15 @@ def cadastrar_certificado():
             flash("Envie o arquivo PDF do certificado.", "error")
             return redirect(url_for("admin.cadastrar_certificado"))
 
-        if not pdf.filename.lower().endswith(".pdf"):
+        pdf_filename = _safe_pdf_filename(pdf.filename)
+        if not pdf_filename or not pdf_filename.lower().endswith(".pdf"):
             flash("O arquivo deve estar no formato PDF.", "error")
             return redirect(url_for("admin.cadastrar_certificado"))
 
-        pdf_bytes = pdf.read()
-        if not pdf_bytes:
-            flash("O arquivo PDF está vazio.", "error")
+        try:
+            pdf_bytes = _read_certificate_pdf(pdf)
+        except ValueError as exc:
+            flash(str(exc), "error")
             return redirect(url_for("admin.cadastrar_certificado"))
 
         try:
@@ -407,7 +500,7 @@ def cadastrar_certificado():
             data_emissao=data_emissao,
             curso=curso,
             instituicao=instituicao,
-            pdf_filename=pdf.filename,
+            pdf_filename=pdf_filename,
             pdf_data=pdf_bytes,
         )
 
@@ -427,32 +520,36 @@ def cadastrar_certificado():
 
 @public_bp.get("/certificados/<int:certificate_id>")
 def download_public_certificate(certificate_id):
-    certificate = db.get_or_404(Certificate, certificate_id)
-
-    if not certificate.pdf_data:
+    record = _find_active_record_by_token(request.args.get("token"))
+    if not record:
         abort(404)
 
-    record = certificate.qr_record
-    if not record or not record.is_active:
+    certificate = Certificate.query.filter_by(
+        id=certificate_id,
+        qr_record_id=record.id,
+    ).first()
+    if not certificate or not certificate.pdf_data:
         abort(404)
 
-    return send_file(
-        BytesIO(certificate.pdf_data),
-        mimetype="application/pdf",
-        as_attachment=True,
-        download_name=certificate.pdf_filename or "certificado.pdf",
-    )
+    return _send_certificate_pdf(certificate)
+
+
+@public_bp.get("/v/<token>/certificado")
+def download_public_certificate_for_token(token):
+    record = _find_active_record_by_token(token)
+    if not record:
+        abort(404)
+
+    certificate = Certificate.query.filter_by(qr_record_id=record.id).first()
+    if not certificate or not certificate.pdf_data:
+        abort(404)
+
+    return _send_certificate_pdf(certificate)
 
 @public_bp.get("/v/<token>")
 def validate_qr(token):
 
-    token_digest = hash_token(token)
-
-    record = QrRecord.query.filter_by(
-        token_hash=token_digest,
-        is_active=True
-    ).first()
-
+    record = _find_active_record_by_token(token)
     if not record:
         return render_template("public/invalid.html"), 404
 
@@ -463,7 +560,8 @@ def validate_qr(token):
     return render_template(
         "public/valid.html",
         record=record,
-        certificate=certificate
+        certificate=certificate,
+        token=token,
     )
 
 @admin_bp.route("/qrcodes/new", methods=["GET", "POST"])
@@ -491,6 +589,15 @@ def new_qrcode():
 def certificado_detail(certificate_id):
     certificate = db.get_or_404(Certificate, certificate_id)
     return render_template("admin/certificado_detail.html", certificate=certificate)
+
+
+@admin_bp.get("/certificados/<int:certificate_id>/pdf")
+@login_required
+def download_certificado(certificate_id):
+    certificate = db.get_or_404(Certificate, certificate_id)
+    if not certificate.pdf_data:
+        abort(404)
+    return _send_certificate_pdf(certificate)
 
 
 @admin_bp.get("/certificados/<int:certificate_id>/delete")
@@ -596,6 +703,52 @@ def delete_qrcode(record_id):
     flash("Registro apagado.", "success")
     return redirect(url_for("admin.qrcodes"))
 
+
+def _client_rate_limit_key():
+    return request.remote_addr or "unknown"
+
+
+def _record_rate_limit_event(scope, key, limits):
+    now = monotonic()
+    bucket = _rate_limit_events[(scope, key)]
+    max_window = max(window for window, _ in limits)
+
+    while bucket and now - bucket[0] > max_window:
+        bucket.popleft()
+
+    is_limited = any(
+        sum(1 for event_time in bucket if now - event_time <= window) >= max_events
+        for window, max_events in limits
+    )
+    bucket.append(now)
+    return is_limited
+
+
+def _clear_rate_limit(scope, key):
+    _rate_limit_events.pop((scope, key), None)
+
+
+def _login_rate_limited(username):
+    normalized_username = (username or "").strip().lower()
+    ip_limited = _record_rate_limit_event(
+        "login-ip",
+        _client_rate_limit_key(),
+        LOGIN_IP_RATE_LIMITS,
+    )
+    user_limited = _record_rate_limit_event(
+        "login-user",
+        normalized_username,
+        LOGIN_USER_RATE_LIMITS,
+    )
+    return ip_limited or user_limited
+
+
+def _clear_login_rate_limit(username):
+    normalized_username = (username or "").strip().lower()
+    _clear_rate_limit("login-ip", _client_rate_limit_key())
+    _clear_rate_limit("login-user", normalized_username)
+
+
 def _safe_next_url():
     target = request.args.get("next")
     if target and target.startswith("/") and not target.startswith("//"):
@@ -661,6 +814,10 @@ def create_app(test_config=None):
         BASE_URL=os.environ.get("BASE_URL", "https://www.validadoreducabrasil.com.br"),
         DEBUG=_env_bool("DEBUG", False),
         TESTING=bool(test_config),
+        TRUST_PROXY=_env_bool("TRUST_PROXY", False),
+        PROXY_FIX_X_FOR=max(0, _env_int("PROXY_FIX_X_FOR", 1)),
+        PROXY_FIX_X_PROTO=max(0, _env_int("PROXY_FIX_X_PROTO", 1)),
+        PROXY_FIX_X_HOST=max(0, _env_int("PROXY_FIX_X_HOST", 1)),
     )
 
     if test_config:
@@ -680,7 +837,13 @@ def create_app(test_config=None):
     login_manager.login_message = "Entre como administrador para continuar."
     login_manager.login_message_category = "warning"
 
-    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
+    if app.config["TRUST_PROXY"]:
+        app.wsgi_app = ProxyFix(
+            app.wsgi_app,
+            x_for=app.config["PROXY_FIX_X_FOR"],
+            x_proto=app.config["PROXY_FIX_X_PROTO"],
+            x_host=app.config["PROXY_FIX_X_HOST"],
+        )
 
     @login_manager.user_loader
     def load_user(user_id):
@@ -707,7 +870,7 @@ def create_app(test_config=None):
         response.headers.setdefault("Permissions-Policy", "geolocation=(), microphone=(), camera=()")
         response.headers.setdefault(
             "Content-Security-Policy",
-            "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; "
+            "default-src 'self'; object-src 'none'; img-src 'self' data:; style-src 'self'; "
             "base-uri 'self'; form-action 'self'; frame-ancestors 'none'",
         )
         response.headers.pop("X-Powered-By", None)
@@ -724,6 +887,17 @@ def create_app(test_config=None):
         current_app.logger.warning(f"CSRF error: {request.remote_addr}")
         flash("Sessão expirada ou formulário inválido. Tente novamente.", "error")
         return redirect(url_for("admin.login"))
+
+    @app.errorhandler(RequestEntityTooLarge)
+    def handle_request_too_large(error):
+        current_app.logger.warning(f"Upload excedeu o limite permitido: {request.remote_addr}")
+        flash("O arquivo enviado excede o limite de 10 MB.", "error")
+        if current_user.is_authenticated:
+            return render_template(
+                "admin/cadastrar_certificado.html",
+                records=_available_qr_records_for_certificate(),
+            ), 413
+        return redirect(url_for("admin.login")), 413
 
     @app.errorhandler(500)
     def handle_500_error(error):

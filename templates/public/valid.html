@@ -13,8 +13,8 @@
       <dd>{{ record.full_name }}</dd>
     </div>
     <div>
-      <dt>CPF</dt>
-      <dd>{{ record.formatted_cpf }}</dd>
+      <dt>CPF parcial</dt>
+      <dd>{{ record.masked_cpf }}</dd>
     </div>
     {% if certificate %}
     <div>
@@ -30,7 +30,7 @@
 
   {% if certificate %}
   <div class="certificate-actions">
-    <a href="{{ url_for('public.download_public_certificate', certificate_id=certificate.id) }}" class="download-btn">
+    <a href="{{ url_for('public.download_public_certificate_for_token', token=token) }}" class="download-btn">
       Baixar Certificado
     </a>
   </div>

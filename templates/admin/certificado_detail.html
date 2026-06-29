@@ -62,7 +62,7 @@
   </div>
 
   <div class="actions-bar">
-    <a href="{{ url_for('public.download_public_certificate', certificate_id=certificate.id) }}" class="button button-primary">
+    <a href="{{ url_for('admin.download_certificado', certificate_id=certificate.id) }}" class="button button-primary">
       Baixar Certificado
     </a>
     <a href="{{ url_for('admin.qrcodes') }}" class="button button-secondary">
